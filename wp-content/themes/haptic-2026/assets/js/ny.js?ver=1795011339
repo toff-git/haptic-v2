@@ -1,0 +1,119 @@
+/* Haptic v2, nettsidedelen: inntoning av scener, «+ Presentation» og avkrysning på /ny/projects/.
+ * Ingen avhengigheter. Avspilleren ligger i present.js og lastes bare på /ny/present/.
+ * Utvalget deles med avspilleren via localStorage-nøkkelen hapticNy.utvalg (se tasks/haptic-v2-grensesnitt.md).
+ */
+(function () {
+	'use strict';
+
+	var NOKKEL = 'hapticNy.utvalg';
+	var body = document.body;
+	if (body.classList.contains('ny--present')) { return; }
+
+	function les() {
+		try {
+			var v = JSON.parse(localStorage.getItem(NOKKEL) || '[]');
+			return Array.isArray(v) ? v.filter(function (s) { return typeof s === 'string'; }) : [];
+		} catch (e) { return []; }
+	}
+	function skriv(liste) {
+		try { localStorage.setItem(NOKKEL, JSON.stringify(liste)); } catch (e) { /* privat vindu: utvalget lever bare i denne visningen */ }
+		document.dispatchEvent(new CustomEvent('ny:utvalg', { detail: liste }));
+	}
+	var minne = null; // reserve når localStorage ikke virker
+	function utvalg() { var l = les(); return l.length || minne === null ? l : minne; }
+	function sett(l) { minne = l.slice(); skriv(l); }
+
+	function presentHref(liste) {
+		var a = document.querySelector('a[data-ny-present]');
+		var base = a ? a.href : '/ny/present/';
+		return liste.length ? base + (base.indexOf('?') < 0 ? '?' : '&') + 'd=' + liste.map(encodeURIComponent).join(',') : base;
+	}
+
+	/* Inntoning: scenene tones inn når de kommer inn i bildet. Uten IntersectionObserver vises alt. */
+	var scener = document.querySelectorAll('.ny-stokk > .sc');
+	if (scener.length && 'IntersectionObserver' in window) {
+		document.documentElement.classList.add('ny-avslor');
+		var io = new IntersectionObserver(function (poster) {
+			poster.forEach(function (p) {
+				if (p.isIntersecting) { p.target.classList.add('er-synlig'); io.unobserve(p.target); }
+			});
+		}, { rootMargin: '0px 0px -12% 0px', threshold: 0.08 });
+		scener.forEach(function (s, i) {
+			if (i === 0) { s.classList.add('er-synlig'); return; }
+			io.observe(s);
+		});
+	}
+
+	/* «+ Presentation» på introen og prosjektsidene. */
+	var legg = document.querySelector('[data-ny-legg]');
+	if (legg) {
+		var stokk = legg.getAttribute('data-ny-legg');
+		var knapp = legg.querySelector('.ny-legg__knapp');
+		var tekst = legg.querySelector('.ny-legg__tekst');
+		var apne = legg.querySelector('.ny-legg__apne');
+		var antall = legg.querySelector('[data-ny-antall]');
+		var tegn = function () {
+			var l = utvalg();
+			var med = l.indexOf(stokk) > -1;
+			knapp.setAttribute('aria-pressed', med ? 'true' : 'false');
+			tekst.textContent = med ? 'In presentation' : 'Presentation';
+			knapp.setAttribute('aria-label', med ? 'Remove from presentation' : 'Add to presentation');
+			antall.textContent = String(l.length);
+			apne.hidden = l.length === 0;
+			apne.href = presentHref(l);
+		};
+		knapp.addEventListener('click', function () {
+			var l = utvalg();
+			var i = l.indexOf(stokk);
+			if (i > -1) { l.splice(i, 1); } else { l.push(stokk); }
+			sett(l);
+		});
+		document.addEventListener('ny:utvalg', tegn);
+		window.addEventListener('storage', function (e) { if (e.key === NOKKEL) { tegn(); } });
+		tegn();
+		legg.hidden = false;
+
+		/* Pillen holder seg unna mens heroen fyller skjermen (rent første inntrykk) og over bunnteksten. */
+		var bunn = document.querySelector('.bunn');
+		var hero = document.querySelector('.ny-stokk > .sc--hero');
+		if ('IntersectionObserver' in window) {
+			var iHero = !!hero, iBunn = false;
+			var oppdater = function () { legg.classList.toggle('er-borte', iHero || iBunn); };
+			if (hero) {
+				new IntersectionObserver(function (p) { iHero = p[0].intersectionRatio > 0.55; oppdater(); }, { threshold: [0, 0.55, 1] }).observe(hero);
+			}
+			if (bunn) {
+				new IntersectionObserver(function (p) { iBunn = p[0].isIntersecting; oppdater(); }).observe(bunn);
+			}
+			oppdater();
+		}
+	}
+
+	/* /ny/projects/: avkrysning. Rekkefølgen er den man krysser av i. */
+	var skjema = document.querySelector('[data-ny-utvalg]');
+	if (skjema) {
+		var bokser = Array.prototype.slice.call(skjema.querySelectorAll('input[name="d"]'));
+		var linje = skjema.querySelector('[data-ny-linje]');
+		var tall = skjema.querySelector('[data-ny-antall]');
+		var tegnSkjema = function () {
+			var l = utvalg();
+			bokser.forEach(function (b) { b.checked = l.indexOf(b.value) > -1; });
+			tall.textContent = String(l.length);
+			linje.hidden = l.length === 0;
+		};
+		skjema.addEventListener('change', function (e) {
+			if (!e.target || e.target.name !== 'd') { return; }
+			var l = utvalg().filter(function (s) { return s !== e.target.value; });
+			if (e.target.checked) { l.push(e.target.value); }
+			sett(l);
+		});
+		skjema.querySelector('[data-ny-tom]').addEventListener('click', function () { sett([]); });
+		skjema.addEventListener('submit', function (e) {
+			e.preventDefault();
+			location.href = presentHref(utvalg());
+		});
+		document.addEventListener('ny:utvalg', tegnSkjema);
+		window.addEventListener('storage', function (e) { if (e.key === NOKKEL) { tegnSkjema(); } });
+		tegnSkjema();
+	}
+})();

@@ -1,0 +1,357 @@
+/* Startpunkt for present.css (skrevet av ny-hjelperen før oppdelingen). Bruker tokens fra .ny i ny.css. */
+/* Redigering /ny/present/ ----------------------------------------------------------------------- */
+.ny-red { padding: calc(var(--hode-h) + clamp(2rem, 5vw, 5rem)) var(--kant) var(--sc-luft); }
+.ny-red__topp { margin-bottom: clamp(2.5rem, 5vw, 4.5rem); }
+.ny-red__flate { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(2.5rem, 5vw, 6rem); align-items: start; }
+.ny-red__utvalg { position: sticky; top: calc(var(--hode-h) + 1rem); }
+.ny-red__h2 { margin: 0 0 1rem; font-weight: 400; font-size: var(--sc-ing); letter-spacing: -0.01em; }
+.ny-red__teller { color: var(--gra); font-variant-numeric: tabular-nums; }
+.ny-red__navnrad { display: grid; gap: .45rem; margin-bottom: 2rem; }
+.ny-red__etikett { font-size: var(--sc-liten); color: var(--gra); }
+.ny-red__navn {
+	font: inherit; font-size: var(--sc-ing); letter-spacing: -0.01em; color: var(--blekk); background: transparent;
+	border: 0; border-bottom: 1px solid var(--gra); border-radius: 0; padding: .35rem 0; width: 100%;
+}
+.ny-red__navn::placeholder { color: #8A857D; }
+.ny-red__navn:focus { outline: none; border-bottom-color: var(--blekk); box-shadow: 0 1px 0 var(--blekk); }
+.ny-red__hjelp, .ny-red__tom { margin: .9rem 0 0; font-size: var(--sc-liten); color: var(--gra); }
+.ny-red__tom { padding: 1.5rem 0; border-top: 1px solid var(--linje); border-bottom: 1px solid var(--linje); color: var(--blekk); }
+
+.ny-rek { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--linje); counter-reset: rek; }
+.ny-rek__rad {
+	position: relative; display: grid; grid-template-columns: auto 72px minmax(0, 1fr) auto; align-items: center; gap: .9rem;
+	padding: .7rem 0; border-bottom: 1px solid var(--linje); background: var(--bunn); counter-increment: rek;
+	transition: transform .35s var(--trykk), box-shadow .2s;
+}
+.ny-rek__rad:focus-visible { outline: 2px solid var(--blekk); outline-offset: 0; }
+.ny-rek__rad.er-dratt { z-index: 2; transition: box-shadow .2s; box-shadow: 0 12px 32px rgba(30, 28, 25, .16); cursor: grabbing; }
+.ny-rek__hank {
+	width: 32px; height: 44px; display: grid; place-items: center; border: 0; background: transparent; color: var(--gra);
+	cursor: grab; touch-action: none; font: inherit; font-size: 1.1rem; letter-spacing: -0.1em; border-radius: var(--pille);
+}
+.ny-rek__hank::before { content: counter(rek); font-size: var(--sc-liten); letter-spacing: 0; font-variant-numeric: tabular-nums; color: var(--blekk); }
+.ny-rek__img { width: 72px; height: 48px; object-fit: cover; display: block; background: var(--kalk); }
+.ny-rek__navn { display: block; font-size: var(--sc-tekst); line-height: 1.3; }
+.ny-rek__antall { display: block; font-size: var(--sc-liten); color: var(--gra); }
+.ny-rek__knapper { display: flex; gap: 2px; }
+.ny-rek__knapper button {
+	min-width: 36px; height: 36px; padding: 0 .55rem; border: 0; border-radius: var(--pille); background: transparent;
+	font: inherit; font-size: var(--sc-liten); color: var(--blekk); cursor: pointer; transition: background-color .2s, transform .12s var(--trykk);
+}
+.ny-rek__knapper button:active { transform: scale(.94); }
+.ny-rek__knapper button:disabled { opacity: .3; cursor: default; }
+@media (hover: hover) { .ny-rek__knapper button:not(:disabled):hover { background: rgba(30, 28, 25, .07); } }
+
+.ny-red__styr { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem; margin-top: 2rem; }
+.ny-red__styr--sma { margin-top: 1rem; gap: 1.25rem; }
+.ny-knapp {
+	min-height: 48px; padding: 0 1.5rem; border: 1px solid var(--blekk); border-radius: var(--pille); background: transparent; color: var(--blekk);
+	font: inherit; font-size: var(--sc-tekst); cursor: pointer; white-space: nowrap; transition: background-color .2s, color .2s, transform .12s var(--trykk);
+}
+.ny-knapp:active { transform: scale(.97); }
+.ny-knapp--hoved { background: var(--blekk); color: var(--bunn); }
+.ny-knapp:disabled { opacity: .35; cursor: default; }
+@media (hover: hover) { .ny-knapp:not(.ny-knapp--hoved):not(:disabled):hover { background: rgba(30, 28, 25, .06); } }
+.ny-red__auto { display: inline-flex; align-items: center; gap: .5rem; margin-left: .4rem; font-size: var(--sc-liten); color: var(--gra); }
+.ny-red__auto select { font: inherit; font-size: var(--sc-liten); color: var(--blekk); background: transparent; border: 1px solid var(--linje); border-radius: var(--pille); padding: .5rem .9rem; }
+.ny-lenkeknapp { padding: .3rem 0; border: 0; background: none; font: inherit; font-size: var(--sc-liten); color: var(--blekk); text-decoration: underline; text-underline-offset: .22em; text-decoration-thickness: 1px; cursor: pointer; }
+.ny-red__melding { font-size: var(--sc-liten); color: var(--gra); }
+
+.ny-lagret { margin-top: 3rem; }
+.ny-lagret__liste { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--linje); }
+.ny-lagret__liste li { display: flex; align-items: baseline; gap: 1rem; padding: .75rem 0; border-bottom: 1px solid var(--linje); font-size: var(--sc-liten); }
+.ny-lagret__liste a { color: var(--blekk); font-size: var(--sc-tekst); text-underline-offset: .2em; text-decoration-thickness: 1px; }
+.ny-lagret__liste span { color: var(--gra); margin-right: auto; }
+.ny-lagret__liste button { border: 0; background: none; font: inherit; font-size: var(--sc-liten); color: var(--gra); cursor: pointer; text-decoration: underline; text-underline-offset: .2em; }
+
+.ny-bibliste { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem var(--luke); }
+.ny-bibknapp { display: block; width: 100%; padding: 0; border: 0; background: none; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.ny-bibknapp__img { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; background: var(--kalk); transition: opacity .25s, transform .12s var(--trykk); }
+.ny-bibknapp:active .ny-bibknapp__img { transform: scale(.985); }
+.ny-bibknapp__navn { display: flex; gap: .5rem; margin-top: .7rem; font-size: var(--sc-tekst); line-height: 1.3; }
+.ny-bibknapp__navn::before { content: "+"; flex: none; width: 1.25rem; height: 1.25rem; margin-top: .02rem; border-radius: 50%; display: grid; place-items: center; font-size: .95rem; line-height: 1; border: 1px solid var(--gra); transition: transform .35s var(--trykk), background-color .2s; }
+.ny-bibknapp[aria-pressed="true"] .ny-bibknapp__navn::before { content: "+"; transform: rotate(45deg); background: var(--signal); border-color: var(--signal); }
+.ny-bibknapp[aria-pressed="true"] .ny-bibknapp__img { opacity: .55; }
+.ny-bibknapp__antall { display: block; margin: .15rem 0 0 1.75rem; font-size: var(--sc-liten); color: var(--gra); }
+.ny-bibknapp:focus-visible { outline: 2px solid var(--blekk); outline-offset: 4px; }
+@media (hover: hover) { .ny-bibknapp:hover .ny-bibknapp__img { opacity: .86; } }
+@media (max-width: 1100px) { .ny-bibliste { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 899px) {
+	.ny-red__flate { grid-template-columns: 1fr; }
+	.ny-red__utvalg { position: static; }
+}
+@media (max-width: 479px) {
+	.ny-rek__rad { grid-template-columns: auto 56px minmax(0, 1fr) auto; gap: .6rem; }
+	.ny-rek__img { width: 56px; height: 40px; }
+	.ny-rek__knapper button[data-rek-opp], .ny-rek__knapper button[data-rek-ned] { display: none; }
+	.ny-red__auto { margin-left: 0; }
+}
+
+/* Avspiller ------------------------------------------------------------------------------------- */
+html.spill-apen, html.spill-apen body { overflow: hidden; }
+.spill {
+	position: fixed; inset: 0; z-index: 100; background: var(--scene); color: var(--scene-tekst);
+	font-family: var(--font); -webkit-font-smoothing: antialiased; user-select: none; -webkit-user-select: none;
+}
+.spill.er-stille { cursor: none; }
+.spill__scene { position: absolute; inset: 0; overflow: hidden; touch-action: pan-y; }
+.spill__lysbilde { position: absolute; inset: 0; container-type: size; opacity: 0; transform: scale(1.012); transition: opacity .55s var(--trykk), transform .9s var(--trykk); }
+.spill__lysbilde.er-inne { opacity: 1; transform: none; }
+.spill__lysbilde.er-ute { opacity: 0; transform: none; transition-duration: .45s; }
+@media (prefers-reduced-motion: reduce) {
+	.spill__lysbilde, .spill__lysbilde.er-ute { transform: none; transition: opacity .18s linear; }
+}
+
+/* Framdrift: hårfin linje nederst */
+.spill__fram { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; z-index: 3; pointer-events: none; }
+.spill__fram span { position: absolute; inset: 0; transform-origin: 0 50%; background: rgba(244, 241, 236, .55); transition: transform .5s var(--trykk); }
+.spill__fram i { position: absolute; inset: 0; transform-origin: 0 50%; background: rgba(244, 241, 236, .22); transform: scaleX(0); }
+
+/* Kontroller: kommer fram når musa beveger seg, glass over bildet */
+.spill__kontroll {
+	position: absolute; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); z-index: 4; transform: translate(-50%, 0);
+	display: flex; align-items: center; gap: 2px; padding: 5px;
+	background: rgba(21, 20, 18, .55); -webkit-backdrop-filter: blur(20px) saturate(160%); backdrop-filter: blur(20px) saturate(160%);
+	border: 1px solid rgba(255, 255, 255, .1); border-radius: var(--pille);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1), 0 10px 30px rgba(0, 0, 0, .3);
+	transition: opacity .35s, transform .45s var(--trykk);
+}
+.spill.er-stille .spill__kontroll { opacity: 0; transform: translate(-50%, 10px); pointer-events: none; }
+.spill__kontroll button {
+	min-width: 40px; height: 40px; padding: 0 .9rem; border: 0; border-radius: var(--pille); background: transparent; color: var(--scene-tekst);
+	font: inherit; font-size: var(--sc-liten); cursor: pointer; white-space: nowrap; transition: background-color .2s, transform .12s var(--trykk);
+}
+.spill__kontroll button:active { transform: scale(.94); }
+.spill__kontroll button[aria-pressed="true"] { background: rgba(244, 241, 236, .16); }
+.spill__teller { padding: 0 .6rem; font-size: var(--sc-liten); color: var(--scene-gra); font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (hover: hover) { .spill__kontroll button:hover { background: rgba(244, 241, 236, .1); } }
+@media (prefers-reduced-transparency: reduce) { .spill__kontroll { background: #23211E; -webkit-backdrop-filter: none; backdrop-filter: none; } }
+.spill :focus-visible { outline: 2px solid var(--scene-tekst); outline-offset: 2px; }
+
+/* Scener som lysbilder: samme markering, skalert med lysbildets egen størrelse (cqh/cqw) -------- */
+.spill .sc {
+	--sc-h: clamp(2rem, 9cqh, 8rem);
+	--sc-h2: clamp(1.5rem, 6.4cqh, 5.5rem);
+	--sc-ing: clamp(1rem, 3.1cqh, 2.4rem);
+	--sc-tekst: clamp(.875rem, 2.5cqh, 1.9rem);
+	--sc-liten: clamp(.8rem, 2.15cqh, 1.6rem);
+	--k: 5.2cqw;
+	position: absolute; inset: 0; min-height: 0; margin: 0; padding: var(--k); color: var(--scene-tekst);
+	background: var(--scene); border: 0; display: block;
+}
+.spill .sc .sc-inn { opacity: 1; transform: none; }
+.spill .sc__media { background: #23211E; }
+.spill .sc__p, .spill .sc__byer p, .spill .sc__psted, .spill .sc__fakta dt { color: var(--scene-gra); }
+.spill .sc__byer strong, .spill .sc__fakta dd { color: var(--scene-tekst); }
+
+/* Hero, bilde (liggende), studio: bildet fyller lysbildet, teksten på et mørkt slør nederst */
+.spill .sc--hero, .spill .sc--bilde.sc--a, .spill .sc--bilde.sc--b, .spill .sc--studios { display: grid; align-items: end; padding: var(--k); isolation: isolate; }
+.spill .sc--hero .sc__media, .spill .sc--bilde.sc--a .sc__media, .spill .sc--bilde.sc--b .sc__media, .spill .sc--studios .sc__media {
+	position: absolute; inset: 0; z-index: -2; height: auto; margin: 0; grid-column: auto; grid-row: auto;
+}
+.spill .sc--bilde.sc--a::after, .spill .sc--bilde.sc--b::after, .spill .sc--studios::after {
+	content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+	background: linear-gradient(to top, rgba(15, 14, 12, .66) 0%, rgba(15, 14, 12, .22) 34%, rgba(15, 14, 12, 0) 52%);
+}
+.spill .sc--hero { padding-bottom: calc(var(--k) * 1.1); }
+.spill .sc--bilde .sc__tekst, .spill .sc--bilde:has(.sc__h) .sc__tekst { grid-column: auto; grid-row: auto; padding: 0; max-width: 62cqw; }
+.spill .sc--bilde .sc__p { color: rgba(244, 241, 236, .9); font-size: var(--sc-tekst); max-width: 44ch; }
+.spill .sc--bilde .sc__h { font-size: var(--sc-h); max-width: 18ch; }
+.spill .sc--studios .sc__tekst { display: grid; grid-template-columns: 1fr 2fr; gap: 3cqw; align-items: end; padding: 0; }
+.spill .sc--studios .sc__h { grid-column: auto; font-size: var(--sc-h); }
+.spill .sc__byer { grid-column: auto; gap: 2.5cqw; }
+.spill .sc--studios .sc__byer p { color: rgba(244, 241, 236, .78); }
+
+/* Stående: hele bildet vises (ingen beskjæring), tekst i margen */
+.spill .sc--staende-a, .spill .sc--staende-b { display: grid; grid-template-columns: 1fr auto; gap: 4cqw; align-items: end; padding: 0 var(--k) 0 0; }
+.spill .sc--staende-a .sc__media, .spill .sc--staende-b .sc__media { position: static; grid-column: 2; grid-row: 1; height: 100cqh; max-height: none; width: auto; aspect-ratio: auto; justify-self: end; }
+.spill .sc--staende-a .sc__img, .spill .sc--staende-b .sc__img { width: auto; height: 100cqh; max-width: 62cqw; object-fit: contain; }
+.spill .sc--staende-a .sc__tekst, .spill .sc--staende-b .sc__tekst { grid-column: 1; grid-row: 1; padding: 0 0 var(--k) var(--k); justify-self: end; max-width: 30cqw; }
+.spill .sc--staende-b { grid-template-columns: auto 1fr; padding: 0 0 0 var(--k); }
+.spill .sc--staende-b .sc__media { grid-column: 1; justify-self: start; }
+.spill .sc--staende-b .sc__tekst { grid-column: 2; justify-self: start; padding: 0 var(--k) var(--k) 0; }
+.spill .sc--staende-a::after, .spill .sc--staende-b::after { content: none; }
+.spill .sc--staende-a .sc__p, .spill .sc--staende-b .sc__p { color: var(--scene-gra); }
+
+/* Statement: setningen stor til venstre, bildet hele høyden til høyre */
+.spill .sc--statement { display: grid; grid-template-columns: 1fr 38cqw; align-items: center; gap: 5cqw; padding: 0 0 0 var(--k); }
+.spill .sc--statement .sc__tekst { grid-column: 1; }
+.spill .sc--statement .sc__media { grid-column: 2; height: 100cqh; aspect-ratio: auto; transform: none; }
+.spill .sc--statement .sc__h { max-width: 11ch; }
+
+/* Bilde og tekst: bildet tar 60 % */
+.spill .sc--bilde-tekst { display: grid; grid-template-columns: 1fr 60cqw; gap: 5cqw; align-items: center; padding: 0 0 0 var(--k); min-height: 0; }
+.spill .sc--bilde-tekst .sc__media, .spill .sc--bilde-tekst.sc--b .sc__media { grid-column: 2; grid-row: 1; height: 100cqh; margin: 0; }
+.spill .sc--bilde-tekst .sc__tekst, .spill .sc--bilde-tekst.sc--b .sc__tekst { grid-column: 1; grid-row: 1; padding: 0; }
+.spill .sc--bilde-tekst.sc--b { grid-template-columns: 60cqw 1fr; padding: 0 var(--k) 0 0; }
+.spill .sc--bilde-tekst.sc--b .sc__media { grid-column: 1; }
+.spill .sc--bilde-tekst.sc--b .sc__tekst { grid-column: 2; }
+.spill .sc__liste { font-size: var(--sc-tekst); }
+.spill .sc__liste li { color: var(--scene-gra); }
+.spill .sc__liste strong { color: var(--scene-tekst); font-weight: 400; }
+
+/* Par: to bilder kant i kant, tekst på slør */
+.spill .sc--par { display: grid; align-items: end; padding: var(--k); isolation: isolate; }
+.spill .sc__par { position: absolute; inset: 0; z-index: -2; gap: 4px; }
+.spill .sc__par .sc__media, .spill .sc__par .sc__media:nth-child(2) { height: 100cqh; margin: 0; }
+.spill .sc--par::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(to top, rgba(15, 14, 12, .66), rgba(15, 14, 12, 0) 45%); }
+.spill .sc--par .sc__tekst { grid-column: auto; margin: 0; max-width: 56cqw; }
+.spill .sc--par .sc__p { color: rgba(244, 241, 236, .88); }
+
+/* Prosjekter: overskrift og et rolig rutenett */
+.spill .sc--prosjekter { display: grid; grid-template-rows: auto 1fr; gap: 4cqh; }
+.spill .sc--prosjekter .sc__tekst { margin: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 4cqw; }
+.spill .sc--prosjekter .sc__tekst > * + * { margin-top: 0; }
+.spill .sc--prosjekter .sc__p { max-width: 36ch; text-align: right; }
+.spill .sc__prosjekter { grid-template-columns: repeat(4, 1fr); grid-auto-rows: 1fr; gap: 3cqh 1.6cqw; min-height: 0; }
+.spill .sc__prosjekter li, .spill .sc__prosjekter li:nth-child(n) { grid-column: auto; display: flex; min-height: 0; }
+.spill .sc__prosjekter li:nth-child(1) { grid-row: span 2; }
+.spill .sc__prosjekter li:nth-child(n+9) { display: none; }
+.spill .sc__prosjekter a { display: flex; flex-direction: column; width: 100%; min-height: 0; pointer-events: none; }
+.spill .sc__pimg, .spill .sc__prosjekter li:nth-child(n) .sc__pimg { flex: 1; min-height: 0; aspect-ratio: auto; height: auto; }
+.spill .sc__pnavn { font-size: var(--sc-tekst); margin-top: 1.2cqh; }
+.spill .sc__psted { font-size: var(--sc-liten); }
+
+/* Om: tittel, ingress og fakta */
+.spill .sc--om { display: grid; grid-template-columns: 1fr 1fr; gap: 6cqw; align-content: center; border: 0; margin: 0; padding: var(--k); }
+.spill .sc--om .sc__tekst { grid-column: 1; }
+.spill .sc--om .sc__h { font-size: var(--sc-h); max-width: 12ch; }
+.spill .sc--om .sc__p { font-size: var(--sc-ing); line-height: 1.4; color: var(--scene-gra); margin-top: 3cqh; }
+.spill .sc__fakta { grid-column: 2; align-self: center; gap: 4cqh 3cqw; }
+.spill .sc__fakta dd { font-size: var(--sc-tekst); }
+.spill .sc__brod { display: none; }
+
+/* Presentatørvisning ---------------------------------------------------------------------------- */
+.spill__presenter { display: none; }
+.spill.er-presenter { background: #0F0E0D; cursor: auto; }
+.spill.er-presenter .spill__scene, .spill.er-presenter .spill__fram, .spill.er-presenter .spill__kontroll { display: none; }
+.spill.er-presenter .spill__presenter {
+	position: absolute; inset: 0; display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto;
+	gap: 24px 32px; padding: 28px 32px 24px; user-select: text; -webkit-user-select: text;
+}
+.pv__topp { grid-column: 1 / -1; display: flex; align-items: baseline; gap: 1.5rem; font-size: .9375rem; color: var(--scene-gra); }
+.pv__stokk { color: var(--scene-tekst); margin-right: auto; }
+.pv__klokke { font-size: 1.5rem; color: var(--scene-tekst); font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.pv__tid { font: inherit; font-size: 1.5rem; color: var(--signal); background: none; border: 0; padding: 0; cursor: pointer; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.pv__na { min-height: 0; display: grid; align-content: start; gap: 10px; }
+.pv__ramme { position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: 100%; overflow: hidden; background: var(--scene); outline: 1px solid rgba(255, 255, 255, .08); }
+.pv__ramme .spill__lysbilde { opacity: 1; transform: none; transition: none; }
+.pv__side { min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 24px; }
+.pv__neste { display: grid; gap: 10px; }
+.pv__etikett { font-size: .875rem; color: var(--scene-gra); }
+.pv__neste .pv__ramme { opacity: .82; }
+.pv__slutt { display: grid; place-items: center; height: 100%; color: var(--scene-gra); font-size: .9375rem; }
+.pv__notat { min-height: 0; overflow-y: auto; display: grid; align-content: start; gap: 10px; }
+.pv__tekst { margin: 0; font-size: clamp(1.25rem, 1rem + .9vw, 1.875rem); line-height: 1.38; letter-spacing: -0.01em; color: var(--scene-tekst); max-width: 34ch; text-wrap: pretty; }
+.pv__tekst.er-tom { color: var(--scene-gra); font-size: 1.0625rem; }
+.pv__bunn { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.pv__bunn button {
+	min-height: 44px; padding: 0 1.1rem; border: 1px solid rgba(244, 241, 236, .18); border-radius: var(--pille); background: transparent; color: var(--scene-tekst);
+	font: inherit; font-size: .9375rem; cursor: pointer; white-space: nowrap; transition: background-color .2s, transform .12s var(--trykk);
+}
+.pv__bunn button:active { transform: scale(.96); }
+.pv__bunn .pv__neste-knapp { background: var(--scene-tekst); color: var(--scene); border-color: var(--scene-tekst); min-width: 120px; }
+.pv__bunn .pv__hoyre { margin-left: auto; }
+.pv__teller { padding: 0 .75rem; font-size: .9375rem; color: var(--scene-gra); font-variant-numeric: tabular-nums; }
+@media (hover: hover) { .pv__bunn button:not(.pv__neste-knapp):hover { background: rgba(244, 241, 236, .08); } }
+@media (max-width: 899px) {
+	.spill.er-presenter .spill__presenter { grid-template-columns: 1fr; grid-template-rows: auto auto auto minmax(0, 1fr) auto; overflow-y: auto; padding: 16px; gap: 16px; }
+	.pv__side { display: contents; }
+	.pv__neste { display: none; }
+	.pv__klokke, .pv__tid { font-size: 1.125rem; }
+	.pv__bunn .pv__hoyre { margin-left: 0; }
+}
+
+/* Tillegg fra present-hjelperen ---------------------------------------------------------------- */
+.ny-red__angre { margin-left: .35rem; }
+.ny-rek__knapper button[data-rek-fjern] { color: var(--gra); }
+.ny-rek__rad { touch-action: pan-y; }
+.ny-rek__rad.er-dratt { transition: none; }
+.spill:focus { outline: none; }
+.spill__live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.spill__kontroll button:disabled { opacity: .3; cursor: default; }
+.spill__kontroll button:disabled:hover { background: transparent; }
+.spill__autovalg {
+	height: 40px; padding: 0 .7rem; margin-right: 4px; border: 0; border-radius: var(--pille); background: rgba(244, 241, 236, .08);
+	color: var(--scene-tekst); font: inherit; font-size: var(--sc-liten); font-variant-numeric: tabular-nums; cursor: pointer;
+}
+.spill__autovalg option { color: #1E1C19; }
+.spill__kontroll { font-size: .9375rem; --sc-liten: .9375rem; }
+/* Teksten kommer et øyeblikk etter bildet, så øyet lander på bildet først. */
+.spill__lysbilde .sc__tekst { opacity: 0; transform: translate3d(0, 1.2cqh, 0); transition: opacity .6s var(--trykk) .18s, transform .9s var(--trykk) .18s; }
+.spill__lysbilde.er-inne .sc__tekst { opacity: 1; transform: none; }
+.spill__lysbilde.er-ute .sc__tekst { transition-delay: 0s; }
+.pv__ramme .sc__tekst { transition: none; }
+.spill__lysbilde .sc__img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pv__tid.er-pause { color: var(--scene-gra); }
+.pv__bunn button:disabled { opacity: .3; cursor: default; }
+@media (prefers-reduced-motion: reduce) {
+	.spill__lysbilde .sc__tekst { transform: none; transition: opacity .18s linear; }
+	.ny-rek__rad { transition: none; }
+}
+@media (max-width: 699px) {
+	.spill__kontroll { left: 12px; right: 12px; transform: none; justify-content: space-between; overflow-x: auto; }
+	.spill.er-stille .spill__kontroll { transform: translate(0, 10px); }
+	.spill__kontroll [aria-label^="Open the presenter"], .spill__autovalg { display: none; }
+}
+.spill__hint {
+	position: absolute; left: 50%; top: max(18px, env(safe-area-inset-top)); z-index: 5; margin: 0; padding: .7rem 1.2rem; transform: translate(-50%, -8px);
+	background: rgba(21, 20, 18, .62); -webkit-backdrop-filter: blur(20px) saturate(160%); backdrop-filter: blur(20px) saturate(160%);
+	border: 1px solid rgba(255, 255, 255, .1); border-radius: var(--pille); font-size: .9375rem; color: var(--scene-tekst);
+	opacity: 0; pointer-events: none; transition: opacity .3s, transform .45s var(--trykk); white-space: nowrap;
+}
+.spill__hint.er-synlig { opacity: 1; transform: translate(-50%, 0); }
+.spill.er-presenter .spill__hint { display: none; }
+@media (prefers-reduced-transparency: reduce) { .spill__hint { background: #23211E; -webkit-backdrop-filter: none; backdrop-filter: none; } }
+/* Fullflate-scenene har én kolonne i lysbildet (nettsidens 12-kolonners rutenett skal ikke klemme teksten). */
+.spill .sc--hero, .spill .sc--bilde.sc--a, .spill .sc--bilde.sc--b, .spill .sc--studios, .spill .sc--par { grid-template-columns: minmax(0, 1fr); column-gap: 0; }
+.spill .sc--bilde.sc--a .sc__tekst, .spill .sc--bilde.sc--b .sc__tekst, .spill .sc--bilde:has(.sc__h) .sc__tekst { grid-column: 1; grid-row: 1; align-self: end; padding: 0; }
+.spill .sc--bilde.sc--a .sc__media, .spill .sc--bilde.sc--b .sc__media { height: auto; }
+/* Stående bilde uten tekst: midt i lysbildet, hele bildet. */
+.spill .sc--staende-a:not(:has(.sc__tekst)), .spill .sc--staende-b:not(:has(.sc__tekst)) { grid-template-columns: minmax(0, 1fr); padding: 0; justify-items: center; }
+.spill .sc--staende-a:not(:has(.sc__tekst)) .sc__media, .spill .sc--staende-b:not(:has(.sc__tekst)) .sc__media { grid-column: 1; justify-self: center; }
+/* Helten: litt slør nederst så ingressen alltid kan leses, også med kontrollene over. */
+.spill .sc--hero .sc__tekst { padding-bottom: 5cqh; }
+.spill .sc__par { grid-column: auto; grid-row: auto; display: grid; grid-template-columns: 1fr 1fr; width: auto; max-width: none; margin: 0; padding: 0; }
+.spill .sc__par .sc__media { width: 100%; transform: none; }
+/* Stående skjerm (telefon på høykant): bilde over, tekst under; skriftstørrelser fra bredden. */
+@container (orientation: portrait) {
+	.spill .sc {
+		--sc-h: clamp(1.75rem, 10cqw, 4rem); --sc-h2: clamp(1.5rem, 8cqw, 3.2rem);
+		--sc-ing: clamp(1rem, 4.6cqw, 1.6rem); --sc-tekst: clamp(.9375rem, 4.2cqw, 1.4rem); --sc-liten: clamp(.8125rem, 3.6cqw, 1.2rem);
+		--k: 6cqw;
+	}
+	.spill .sc--statement, .spill .sc--bilde-tekst, .spill .sc--bilde-tekst.sc--b {
+		grid-template-columns: minmax(0, 1fr); grid-template-rows: 52cqh minmax(0, 1fr); align-items: start; gap: 5cqh; padding: 0 0 var(--k);
+	}
+	.spill .sc--statement .sc__media, .spill .sc--bilde-tekst .sc__media, .spill .sc--bilde-tekst.sc--b .sc__media { grid-column: 1; grid-row: 1; height: 52cqh; }
+	.spill .sc--statement .sc__tekst, .spill .sc--bilde-tekst .sc__tekst, .spill .sc--bilde-tekst.sc--b .sc__tekst { grid-column: 1; grid-row: 2; padding: 0 var(--k); }
+	.spill .sc--om { grid-template-columns: minmax(0, 1fr); gap: 5cqh; }
+	.spill .sc--om .sc__tekst, .spill .sc__fakta { grid-column: 1; }
+	.spill .sc--studios .sc__tekst { grid-template-columns: minmax(0, 1fr); gap: 3cqh; }
+	.spill .sc--staende-a, .spill .sc--staende-b { grid-template-columns: minmax(0, 1fr); padding: 0; justify-items: center; }
+	.spill .sc--staende-a .sc__media, .spill .sc--staende-b .sc__media { grid-column: 1; justify-self: center; }
+	.spill .sc--staende-a .sc__img, .spill .sc--staende-b .sc__img { max-width: 100cqw; }
+	.spill .sc--staende-a .sc__tekst, .spill .sc--staende-b .sc__tekst { position: absolute; left: 0; bottom: 0; max-width: none; padding: var(--k); }
+	.spill .sc__prosjekter { grid-template-columns: repeat(2, 1fr); }
+	.spill .sc__prosjekter li:nth-child(1) { grid-row: auto; }
+	.spill .sc__prosjekter li:nth-child(n+7) { display: none; }
+	.spill .sc--prosjekter .sc__tekst { display: block; }
+	.spill .sc--prosjekter .sc__p { text-align: left; margin-top: 1.5cqh; }
+}
+@media (max-width: 899px) {
+	.spill.er-presenter .spill__presenter { display: flex; flex-direction: column; }
+	.pv__na, .pv__notat { flex: none; }
+	.pv__bunn { margin-top: auto; }
+}
+@container (orientation: portrait) {
+	/* Liggende foto på høykant: hele bildet, midt i, i stedet for en smal beskjæring. */
+	.spill .sc--bilde.sc--a .sc__media, .spill .sc--bilde.sc--b .sc__media { display: grid; place-items: center; background: transparent; }
+	.spill .sc--bilde.sc--a .sc__img, .spill .sc--bilde.sc--b .sc__img { width: 100%; height: auto; max-height: 100%; object-fit: contain; }
+	.spill .sc--bilde.sc--a::after, .spill .sc--bilde.sc--b::after { content: none; }
+}
+/* Nettsidens mobilmål (aspect-ratio, negative marger) skal ikke følge med inn i lysbildet. */
+.spill .spill__lysbilde .sc .sc__media { aspect-ratio: auto; margin: 0; }
+.spill .spill__lysbilde .sc--bilde.sc--a .sc__media, .spill .spill__lysbilde .sc--bilde.sc--b .sc__media,
+.spill .spill__lysbilde .sc--hero .sc__media, .spill .spill__lysbilde .sc--studios .sc__media { height: auto; }
+.spill .spill__lysbilde .sc__par .sc__media { height: 100cqh; }

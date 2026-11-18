@@ -1,0 +1,320 @@
+/* Haptic 2026: ingen avhengigheter, ingen jQuery.
+   Moduler: topptekst, meny, prosjektfilter, folkefilter og profilkort, faner, klokker, inntoning. */
+(function () {
+	'use strict';
+
+	var T = (window.hapticTema && window.hapticTema.tekst) || {};
+	var rolig = window.matchMedia('(prefers-reduced-motion: reduce)');
+	var $ = function (s, r) { return (r || document).querySelector(s); };
+	var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+	/* Topptekst: fast bakgrunn etter litt scroll, skjules på vei ned og vises på vei opp. */
+	var hode = $('[data-hode]');
+	if (hode) {
+		var sisteY = window.scrollY;
+		var paaVent = false;
+		var oppdaterHode = function () {
+			var y = window.scrollY;
+			hode.classList.toggle('er-rullet', y > 40);
+			if (!document.body.classList.contains('meny-er-apen')) {
+				if (y > 420 && y > sisteY + 6) { hode.classList.add('er-skjult'); }
+				else if (y < sisteY - 6 || y <= 420) { hode.classList.remove('er-skjult'); }
+			}
+			document.documentElement.classList.toggle('hode-skjult', hode.classList.contains('er-skjult'));
+			sisteY = y;
+			paaVent = false;
+		};
+		window.addEventListener('scroll', function () {
+			if (!paaVent) { paaVent = true; window.requestAnimationFrame(oppdaterHode); }
+		}, { passive: true });
+		oppdaterHode();
+		hode.addEventListener('focusin', function () { hode.classList.remove('er-skjult'); });
+	}
+
+	/* Fullskjermsmeny med fokusfelle og Esc. */
+	var meny = $('[data-meny]');
+	var menyKnapp = $('[data-meny-knapp]');
+	if (meny && menyKnapp) {
+		var fokuserbare = function () {
+			return $$('a[href], button:not([disabled]), input', meny).filter(function (el) { return el.offsetParent !== null; });
+		};
+		var lukkMeny = function () {
+			meny.hidden = true;
+			document.body.classList.remove('meny-er-apen');
+			menyKnapp.setAttribute('aria-expanded', 'false');
+			menyKnapp.focus();
+		};
+		menyKnapp.addEventListener('click', function () {
+			meny.hidden = false;
+			document.body.classList.add('meny-er-apen');
+			menyKnapp.setAttribute('aria-expanded', 'true');
+			var liste = $('.meny__liste a', meny);
+			(liste || fokuserbare()[0]).focus();
+		});
+		$('[data-meny-lukk]', meny).addEventListener('click', lukkMeny);
+		/* Lenker til et anker på samme side (Contact) lukker menyen. */
+		meny.addEventListener('click', function (e) {
+			var a = e.target.closest('a[href^="#"]');
+			if (a) { meny.hidden = true; document.body.classList.remove('meny-er-apen'); menyKnapp.setAttribute('aria-expanded', 'false'); }
+		});
+		meny.addEventListener('keydown', function (e) {
+			if (e.key === 'Escape') { e.preventDefault(); lukkMeny(); return; }
+			if (e.key !== 'Tab') { return; }
+			var f = fokuserbare();
+			if (!f.length) { return; }
+			if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+			else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+		});
+	}
+
+	/* «More» i filterlister -------------------------------------------------- */
+	$$('[data-filter-mer]').forEach(function (knapp) {
+		var tekst = knapp.textContent;
+		knapp.addEventListener('click', function () {
+			var liste = knapp.closest('.filter__liste');
+			var apen = liste.classList.toggle('viser-alle');
+			knapp.setAttribute('aria-expanded', apen ? 'true' : 'false');
+			knapp.textContent = apen ? '−' : tekst;
+		});
+	});
+
+	/* Prosjektfilter uten sideinnlasting (?filter=<keyword>) ------------------ */
+	$$('[data-filter]').forEach(function (nav) {
+		var rutenett = nav.parentNode.querySelector('[data-rutenett]');
+		if (!rutenett) { return; }
+		var kort = $$('.kort', rutenett);
+		var status = $('[data-filter-status]', nav);
+		var tom = nav.parentNode.querySelector('[data-tom]');
+		function bruk(verdi, lenke) {
+			var n = 0;
+			kort.forEach(function (k) {
+				var treff = !verdi || (' ' + k.getAttribute('data-keywords') + ' ').indexOf(' ' + verdi + ' ') !== -1;
+				k.hidden = !treff;
+				if (treff) { n++; }
+			});
+			$$('[data-filter-verdi]', nav).forEach(function (a) {
+				var aktiv = a.getAttribute('data-filter-verdi') === verdi;
+				a.classList.toggle('er-aktiv', aktiv);
+				if (aktiv) { a.setAttribute('aria-current', 'true'); } else { a.removeAttribute('aria-current'); }
+			});
+			if (tom) { tom.hidden = n > 0; }
+			if (status) { status.textContent = n + ' ' + (T.treff || 'projects'); }
+			if (lenke && window.history && window.history.replaceState) { window.history.replaceState(null, '', lenke); }
+		}
+		nav.addEventListener('click', function (e) {
+			var a = e.target.closest('[data-filter-verdi]');
+			if (!a || e.metaKey || e.ctrlKey || e.shiftKey) { return; }
+			e.preventDefault();
+			bruk(a.getAttribute('data-filter-verdi'), a.href);
+			var li = a.closest('.filter__ekstra');
+			if (li) { nav.querySelector('.filter__liste').classList.add('viser-alle'); }
+		});
+	});
+
+	/* Folk: filter på studio og profilkort i dialog med egen URL --------------- */
+	$$('[data-folkfilter]').forEach(function (nav) {
+		var seksjon = nav.closest('section');
+		var kort = $$('.person-kort', seksjon);
+		var status = $('[data-filter-status]', nav);
+		nav.addEventListener('click', function (e) {
+			var a = e.target.closest('[data-studio-verdi]');
+			if (!a || e.metaKey || e.ctrlKey || e.shiftKey) { return; }
+			e.preventDefault();
+			var v = a.getAttribute('data-studio-verdi');
+			var n = 0;
+			kort.forEach(function (k) {
+				var treff = !v || (' ' + k.getAttribute('data-studio') + ' ').indexOf(' ' + v + ' ') !== -1;
+				k.hidden = !treff;
+				if (treff) { n++; }
+			});
+			$$('[data-studio-verdi]', nav).forEach(function (b) {
+				var aktiv = b === a;
+				b.classList.toggle('er-aktiv', aktiv);
+				if (aktiv) { b.setAttribute('aria-current', 'true'); } else { b.removeAttribute('aria-current'); }
+			});
+			if (status) { status.textContent = String(n); }
+			if (window.history.replaceState) { window.history.replaceState(null, '', a.href); }
+		});
+	});
+
+	var dialog = $('[data-profil-dialog]');
+	if (dialog && typeof dialog.showModal === 'function' && window.fetch && window.DOMParser) {
+		var innhold = $('[data-profil-innhold]', dialog);
+		var forrigeUrl = null;
+		var forrigeTittel = document.title;
+		var aapnet = null;
+		var lukkDialog = function () { if (dialog.open) { dialog.close(); } };
+		document.addEventListener('click', function (e) {
+			var a = e.target.closest('[data-profil]');
+			if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) { return; }
+			e.preventDefault();
+			aapnet = a;
+			fetch(a.href, { credentials: 'same-origin' }).then(function (r) {
+				if (!r.ok) { throw new Error(r.status); }
+				return r.text();
+			}).then(function (html) {
+				var doc = new DOMParser().parseFromString(html, 'text/html');
+				var art = doc.querySelector('[data-profil-artikkel]');
+				if (!art) { throw new Error('mangler profil'); }
+				var h1 = art.querySelector('h1');
+				if (h1) { var h2 = document.createElement('h2'); h2.className = h1.className; h2.id = 'profil-navn'; h2.innerHTML = h1.innerHTML; h1.parentNode.replaceChild(h2, h1); }
+				art.classList.remove('ramme');
+				innhold.innerHTML = '';
+				innhold.appendChild(document.importNode(art, true));
+				dialog.setAttribute('aria-labelledby', 'profil-navn');
+				forrigeUrl = window.location.href;
+				forrigeTittel = document.title;
+				// Kortet har egen URL (delbar), men uten ny historikk: lukking setter adressen tilbake.
+				window.history.replaceState({ profil: true }, '', a.href);
+				document.title = doc.title;
+				dialog.showModal();
+				dialog.scrollTop = 0;
+			}).catch(function () { window.location.href = a.href; });
+		});
+		$('[data-profil-lukk]', dialog).addEventListener('click', lukkDialog);
+		dialog.addEventListener('click', function (e) { if (e.target === dialog) { lukkDialog(); } });
+		dialog.addEventListener('close', function () {
+			if (forrigeUrl) { window.history.replaceState(null, '', forrigeUrl); }
+			document.title = forrigeTittel;
+			if (aapnet) { aapnet.focus(); }
+		});
+	}
+
+	/* Fasemenyen på prosjektsiden: markerer fasen man leser (den øverste som er passert under menyen). */
+	$$('[data-fasemeny]').forEach(function (meny) {
+		var lenker = $$('a[href^="#fase-"]', meny);
+		var faser = lenker.map(function (l) { return document.getElementById(l.getAttribute('href').slice(1)); });
+		var paaVent = false, laast = -1;
+		var marker = function () {
+			if (laast > -1) { paaVent = false; return; }
+			var grense = Math.max(meny.getBoundingClientRect().bottom, 72) + 120, aktiv = -1;
+			faser.forEach(function (f, i) { if (f && f.getBoundingClientRect().top <= grense) { aktiv = i; } });
+			lenker.forEach(function (l, i) {
+				if (i === aktiv) {
+					if (!l.hasAttribute('aria-current')) {
+						l.setAttribute('aria-current', 'true');
+						var liste = l.parentNode.parentNode;
+						liste.scrollTo({ left: l.offsetLeft - liste.offsetLeft - 16, behavior: 'smooth' });
+					}
+				} else { l.removeAttribute('aria-current'); }
+			});
+			paaVent = false;
+		};
+		/* Bilder over målet lastes mens siden ruller og kan skyve det ned; rett opp etterpå og marker fasen man valgte. */
+		lenker.forEach(function (l, i) {
+			l.addEventListener('click', function (e) {
+				if (!faser[i]) { return; }
+				e.preventDefault();
+				laast = i;
+				lenker.forEach(function (m, j) { if (j === i) { m.setAttribute('aria-current', 'true'); } else { m.removeAttribute('aria-current'); } });
+				faser[i].scrollIntoView({ behavior: 'smooth', block: 'start' });
+				if (history.replaceState) { history.replaceState(null, '', '#' + faser[i].id); }
+				[700, 1400].forEach(function (ms) {
+					window.setTimeout(function () {
+						if (laast === i) { faser[i].scrollIntoView({ behavior: ms < 1400 ? 'smooth' : 'auto', block: 'start' }); }
+						if (ms === 1400) { window.setTimeout(function () { laast = -1; }, 150); }
+					}, ms);
+				});
+			});
+		});
+		window.addEventListener('scroll', function () {
+			if (!paaVent) { paaVent = true; window.requestAnimationFrame(marker); }
+		}, { passive: true });
+		marker();
+	});
+
+	/* Klokker per by ------------------------------------------------------------- */
+	/* Hver klokke regnes ut fra sin egen studios UTC-avvik (data-utc-avvik, satt av serveren), så tiden
+	   ikke avhenger av tidssonedataene i nettleseren. Intl brukes bare når avviket mangler. */
+	var klokker = $$('[data-tidssone]');
+	if (klokker.length) {
+		var tosifret = function (n) { return (n < 10 ? '0' : '') + n; };
+		var tikk = function () {
+			var naa = Date.now();
+			klokker.forEach(function (k) {
+				var avvik = parseInt(k.getAttribute('data-utc-avvik'), 10), t = '';
+				if (!isNaN(avvik)) {
+					var d = new Date(naa + avvik * 1000);
+					t = tosifret(d.getUTCHours()) + ':' + tosifret(d.getUTCMinutes());
+				} else if (window.Intl) {
+					try {
+						t = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', hourCycle: 'h23', timeZone: k.getAttribute('data-tidssone') }).format(new Date(naa));
+					} catch (e) { /* ukjent tidssone */ }
+				}
+				if (t && k.textContent !== t) { k.textContent = t; k.setAttribute('datetime', t); }
+			});
+		};
+		tikk();
+		window.setInterval(tikk, 15000);
+	}
+
+	/* How: «Show all» per fase når det er flere enn åtte bilder ------------------------ */
+	$$('.how__innhold .posts').forEach(function (poster) {
+		var antall = poster.querySelectorAll(':scope > .post-item').length;
+		var knapp = poster.querySelector('.load-more');
+		if (!knapp) {
+			knapp = document.createElement('a');
+			knapp.href = '#';
+			knapp.className = 'load-more';
+			poster.appendChild(knapp);
+		}
+		if (antall <= 8) { return; }
+		knapp.textContent = (T.visAlle || 'Show all') + ' (' + antall + ')';
+		knapp.setAttribute('role', 'button');
+		knapp.classList.add('er-aktiv');
+		knapp.addEventListener('click', function (e) {
+			e.preventDefault();
+			poster.classList.add('vis-alle');
+			knapp.classList.remove('er-aktiv');
+		});
+	});
+
+	/* Video i innholdet: lastes ikke før den er synlig (preload="none"), spilles av når den er i bildet --- */
+	var videoer = $$('video[data-autospill]');
+	if (videoer.length) {
+		var spill = function (v) { var l = v.play(); if (l && l.catch) { l.catch(function () {}); } };
+		if (rolig.matches) {
+			videoer.forEach(function (v) { v.controls = true; });
+		} else if ('IntersectionObserver' in window) {
+			var vobs = new IntersectionObserver(function (poster) {
+				poster.forEach(function (p) {
+					if (p.isIntersecting) { spill(p.target); } else if (!p.target.paused) { p.target.pause(); }
+				});
+			}, { rootMargin: '200px 0px' });
+			videoer.forEach(function (v) { vobs.observe(v); });
+		} else {
+			videoer.forEach(spill);
+		}
+	}
+
+	/* Myk inntoning av kort og bilder når de kommer inn i bildet -------------- */
+	/* Innhold skal aldri bli stående usynlig: alt vises senest etter 2 s (også i CSS, hvis JS stopper),
+	   før utskrift, og når siden er scrollet forbi et kort uten at observatøren har slått til. */
+	if (!rolig.matches && 'IntersectionObserver' in window) {
+		var skjulte = [];
+		var vis = function (el) { el.classList.add('er-synlig'); };
+		var obs = new IntersectionObserver(function (poster) {
+			poster.forEach(function (p) {
+				if (p.isIntersecting) { vis(p.target); obs.unobserve(p.target); }
+			});
+		}, { rootMargin: '0px 0px -8% 0px' });
+		$$('.kort, .dagbok__post, .person-kort, .bildelop__bilde, .studio-kort, .strom__post, .arbeid__post').forEach(function (el) {
+			if (el.getBoundingClientRect().top > window.innerHeight) { el.classList.add('tone-inn'); obs.observe(el); skjulte.push(el); }
+		});
+		var visAlle = function () {
+			skjulte.forEach(vis);
+			obs.disconnect();
+			window.removeEventListener('scroll', visPasserte);
+		};
+		var visPasserte = function () {
+			skjulte.forEach(function (el) {
+				if (el.getBoundingClientRect().top < window.innerHeight) { vis(el); }
+			});
+		};
+		if (skjulte.length) {
+			window.setTimeout(visAlle, 1100); // + 0,9 s overgang = helt synlig etter 2 s
+			window.addEventListener('scroll', visPasserte, { passive: true });
+			window.addEventListener('beforeprint', visAlle);
+		}
+	}
+})();

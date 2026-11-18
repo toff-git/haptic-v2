@@ -1,0 +1,308 @@
+/* Haptic v2: nettside som også er presentasjon. Lastes bare på /ny/-sidene, etter haptic.css.
+ *
+ * Design read: arkitektkontor som viser arbeid for byggherrer, både på skjerm og på projektor.
+ * Redaksjonelt galleri, merkevarens egen skrift (Akkurat), papirfarge fra dagens side, én aksent (signalgul,
+ * bare som flate bak mørk tekst). Dials: variance 6, motion 4, density 2.
+ * Formregel: bilder og flater har skarpe hjørner (0); alt man trykker på er pille (999px).
+ * Hver scene er laget for å fylle én skjerm, slik at samme markering fungerer som lysbilde.
+ */
+
+.ny {
+	--sc-luft: clamp(3.5rem, 2rem + 5vw, 7rem);
+	--sc-h: clamp(2.25rem, 1.1rem + 4.2vw, 5.25rem);
+	--sc-h2: clamp(1.75rem, 1rem + 2.6vw, 3.5rem);
+	--sc-ing: clamp(1.125rem, 1rem + 0.45vw, 1.4375rem);
+	--sc-tekst: 1.0625rem;
+	--sc-liten: 0.9375rem;
+	--scene: #151412;
+	--scene-tekst: #F4F1EC;
+	--scene-gra: #A9A49C;
+	--trykk: cubic-bezier(.2, .8, .2, 1);
+	--pille: 999px;
+	background: var(--bunn);
+}
+
+/* Felles ---------------------------------------------------------------------------------------- */
+.sc { position: relative; padding: var(--sc-luft) var(--kant); }
+.sc__media { margin: 0; overflow: hidden; background: var(--kalk); }
+.sc__img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.sc__h {
+	margin: 0; font-weight: 400; font-size: var(--sc-h2); line-height: 1.04; letter-spacing: -0.028em;
+	text-wrap: balance; max-width: 20ch;
+}
+.sc__p, .sc__ingress { margin: 0; font-size: var(--sc-tekst); line-height: 1.55; max-width: 46ch; text-wrap: pretty; }
+.sc__ingress { font-size: var(--sc-ing); line-height: 1.42; letter-spacing: -0.006em; }
+.sc .sc__tekst > * + * { margin-top: 1.1rem; }
+.sc__liste { list-style: none; margin: 0; padding: 0; font-size: var(--sc-tekst); line-height: 1.5; }
+.sc__liste li { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 1rem; padding: .7rem 0; border-top: 1px solid var(--linje); }
+.sc__liste li:last-child { border-bottom: 1px solid var(--linje); }
+.sc__liste strong { font-weight: 400; }
+.sc__liste span { color: var(--gra); }
+.sc__notat { display: none; }
+
+/* Hero: bildet fyller skjermen, tittel og ingress nede til venstre ------------------------------- */
+.sc--hero {
+	min-height: 100svh; min-height: 100dvh; display: grid; align-items: end;
+	padding-bottom: clamp(2rem, 7vh, 5.5rem); color: #FFFFFF; isolation: isolate; background: var(--blekk);
+}
+.sc--hero .sc__media { position: absolute; inset: 0; z-index: -2; background: #2A2723; }
+.sc--hero::after {
+	content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+	background: linear-gradient(to top, rgba(20, 18, 15, .62) 0%, rgba(20, 18, 15, .28) 38%, rgba(20, 18, 15, 0) 62%),
+		linear-gradient(to bottom, rgba(20, 18, 15, .32), rgba(20, 18, 15, 0) 22%);
+}
+.sc--hero .sc__h { font-size: var(--sc-h); max-width: 14ch; line-height: 1.02; letter-spacing: -0.034em; }
+.sc--hero .sc__ingress { max-width: 40ch; color: rgba(255, 255, 255, .9); }
+
+/* Statement: stor setning til venstre, et stående bilde forskjøvet til høyre --------------------- */
+.sc--statement { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: var(--luke); align-items: center; min-height: 92dvh; }
+.sc--statement .sc__tekst { grid-column: 1 / span 7; }
+.sc--statement .sc__h { font-size: var(--sc-h); max-width: 12ch; line-height: 1.02; letter-spacing: -0.034em; }
+.sc--statement .sc__p { font-size: var(--sc-ing); line-height: 1.42; color: var(--gra); max-width: 34ch; }
+.sc--statement .sc__media { grid-column: 8 / -1; aspect-ratio: 4 / 5; max-height: 86dvh; transform: translateY(8%); }
+
+/* Studios: bredt bilde, så tre byer på én linje -------------------------------------------------- */
+.sc--studios { padding-top: 0; }
+.sc--studios .sc__media { margin-inline: calc(var(--kant) * -1); height: min(78dvh, 56vw); }
+.sc--studios .sc__tekst { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: var(--luke); padding-top: clamp(1.75rem, 3vw, 3rem); }
+.sc.sc--studios .sc__tekst > * + * { margin-top: 0; }
+.sc--studios .sc__h { grid-column: 1 / span 4; }
+.sc__byer { grid-column: 5 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--luke); }
+.sc__byer p { margin: 0; font-size: var(--sc-liten); line-height: 1.5; color: var(--gra); }
+.sc__byer strong { display: block; margin-bottom: .2rem; font-weight: 400; font-size: var(--sc-ing); letter-spacing: -0.01em; color: var(--blekk); }
+
+/* Bilde + tekst: tekst i smal spalte, bildet tar resten ----------------------------------------- */
+.sc--bilde-tekst { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: var(--luke); align-items: center; min-height: 100dvh; }
+.sc--bilde-tekst .sc__media { grid-column: 5 / -1; grid-row: 1; height: min(86dvh, 52vw); margin-right: calc(var(--kant) * -1); }
+.sc--bilde-tekst .sc__tekst { grid-column: 1 / span 4; grid-row: 1; padding-right: var(--luke); }
+.sc--bilde-tekst.sc--b .sc__media { grid-column: 1 / span 8; margin: 0 0 0 calc(var(--kant) * -1); }
+.sc--bilde-tekst.sc--b .sc__tekst { grid-column: 9 / -1; padding: 0 0 0 var(--luke); }
+
+/* Bilde: helt ut i kanten (a) eller innrykket med tekst i marg (b) ------------------------------ */
+.sc--bilde { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: var(--luke); row-gap: 1.25rem; }
+.sc--bilde .sc__media { grid-column: 1 / -1; }
+.sc--bilde.sc--a { padding-inline: 0; }
+.sc--bilde.sc--a .sc__media { height: min(100dvh, 66vw); }
+.sc--bilde.sc--a .sc__tekst { grid-column: 2 / span 5; padding-inline: var(--kant) 0; }
+.sc--bilde.sc--b .sc__media { grid-column: 4 / -1; grid-row: 1; height: min(88dvh, 50vw); margin-right: calc(var(--kant) * -1); }
+.sc--bilde.sc--b .sc__tekst { grid-column: 1 / span 3; grid-row: 1; align-self: end; }
+.sc--bilde .sc__p { color: var(--gra); font-size: var(--sc-liten); max-width: 36ch; }
+/* Med overskrift (introen): overskriften over bildet, stor. */
+.sc--bilde .sc__h { font-size: var(--sc-h2); }
+.sc--bilde:has(.sc__h) .sc__tekst { grid-row: 1; grid-column: 1 / span 9; padding-inline: var(--kant); padding-bottom: clamp(1rem, 2vw, 2rem); }
+.sc--bilde:has(.sc__h) .sc__media { grid-row: 2; }
+.sc--bilde.sc--b:has(.sc__h) .sc__tekst { grid-column: 1 / span 9; padding-inline: 0; }
+.sc--bilde.sc--b:has(.sc__h) .sc__media { grid-column: 1 / -1; margin-inline: calc(var(--kant) * -1); height: min(92dvh, 60vw); }
+
+/* Stående bilder: høyt bilde, tekst ved foten */
+.sc--staende-a .sc__media, .sc--staende-b .sc__media { height: 92dvh; max-height: 64vw; aspect-ratio: 4 / 5; width: auto; justify-self: start; }
+.sc--staende-a .sc__media { grid-column: 5 / span 6; grid-row: 1; }
+.sc--staende-a .sc__tekst { grid-column: 1 / span 3; grid-row: 1; align-self: end; }
+.sc--staende-b .sc__media { grid-column: 2 / span 6; grid-row: 1; }
+.sc--staende-b .sc__tekst { grid-column: 9 / span 3; grid-row: 1; align-self: end; }
+
+/* Par: to stående side om side ------------------------------------------------------------------ */
+.sc--par { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: var(--luke); row-gap: 1.25rem; }
+.sc__par { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; gap: var(--luke); }
+.sc__par .sc__media { height: min(90dvh, 62vw); }
+.sc__par .sc__media:nth-child(2) { margin-top: clamp(2rem, 8vw, 9rem); }
+.sc--par .sc__tekst { grid-column: 1 / span 5; margin-top: calc(clamp(2rem, 8vw, 9rem) * -1 + 1rem); }
+.sc--par .sc__p { color: var(--gra); }
+.sc--par .sc__h + .sc__p { color: var(--gra); }
+
+/* Prosjekter: rutenett med navn og sted --------------------------------------------------------- */
+.sc--prosjekter .sc__tekst { margin-bottom: clamp(2rem, 4vw, 3.5rem); }
+.sc--prosjekter .sc__p { color: var(--gra); }
+.sc__prosjekter { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(12, 1fr); gap: clamp(2rem, 3vw, 3rem) var(--luke); }
+@media (min-width: 768px) {
+	/* Rytme: to store, tre mindre, og to store igjen når det er sju (ingen tomme ruter). */
+	.sc__prosjekter li { grid-column: span 4; }
+	.sc__prosjekter li:nth-child(1), .sc__prosjekter li:nth-child(2),
+	.sc__prosjekter li:nth-child(6):nth-last-child(2), .sc__prosjekter li:nth-child(7):last-child { grid-column: span 6; }
+	.sc__prosjekter li:nth-child(1) .sc__pimg, .sc__prosjekter li:nth-child(2) .sc__pimg { aspect-ratio: 4 / 3; }
+	.sc__prosjekter li:nth-child(6):nth-last-child(2) .sc__pimg, .sc__prosjekter li:nth-child(7):last-child .sc__pimg { aspect-ratio: 16 / 9; }
+}
+.sc__prosjekter a { display: block; color: inherit; text-decoration: none; }
+.sc__pimg { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; background: var(--kalk); transition: opacity .3s; }
+.sc__pnavn { display: block; margin-top: .85rem; font-size: var(--sc-ing); letter-spacing: -0.01em; line-height: 1.25; }
+.sc__psted { display: block; margin-top: .2rem; font-size: var(--sc-liten); color: var(--gra); }
+@media (hover: hover) {
+	.sc__prosjekter a:hover .sc__pimg { opacity: .86; }
+	.sc__prosjekter a:hover .sc__pnavn { text-decoration: underline; text-underline-offset: .18em; text-decoration-thickness: 1px; }
+}
+
+/* Om prosjektet --------------------------------------------------------------------------------- */
+.sc--om { display: grid; grid-template-columns: repeat(12, 1fr); column-gap: var(--luke); row-gap: clamp(2rem, 4vw, 3.5rem); border-top: 1px solid var(--linje); margin-inline: var(--kant); padding-inline: 0; }
+.sc--om .sc__tekst { grid-column: 1 / span 4; }
+.sc__fakta { grid-column: 5 / -1; margin: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem var(--luke); }
+.sc__fakta dt { font-size: var(--sc-liten); color: var(--gra); }
+.sc__fakta dd { margin: .3rem 0 0; font-size: var(--sc-tekst); line-height: 1.45; }
+.sc__brod { grid-column: 5 / span 7; font-size: var(--sc-tekst); line-height: 1.62; }
+.sc__brod > * { max-width: 62ch; }
+.sc__brod p { margin: 0 0 1.1em; }
+.sc__brod h3 { margin: 2em 0 .6em; font-weight: 700; font-size: var(--sc-tekst); }
+.sc__brod blockquote { margin: 1.6em 0; font-size: var(--sc-ing); line-height: 1.4; letter-spacing: -0.01em; }
+.sc__brod blockquote p { margin: 0; }
+.sc__brod a { color: inherit; text-underline-offset: .18em; }
+
+/* Flere bilder (bare nettsiden): vannrett rad som kan sveipes ------------------------------------ */
+.ny-ekstra { padding: 0 0 var(--sc-luft); }
+.ny-ekstra__rad {
+	list-style: none; margin: 0; padding: 0 var(--kant); display: grid; grid-auto-flow: column; grid-auto-columns: auto;
+	gap: var(--luke); overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--kant); overscroll-behavior-x: contain;
+	scrollbar-width: thin; scrollbar-color: var(--linje) transparent;
+}
+.ny-ekstra__rad li { scroll-snap-align: start; }
+.ny-ekstra__img { display: block; height: clamp(220px, 34vw, 440px); width: auto; max-width: none; background: var(--kalk); }
+
+/* Neste prosjekt -------------------------------------------------------------------------------- */
+.ny-neste { padding: 0 var(--kant) var(--sc-luft); display: grid; gap: 1.25rem; }
+.ny-neste > a:first-child { position: relative; display: block; color: #FFFFFF; text-decoration: none; overflow: hidden; background: var(--blekk); }
+.ny-neste__img { display: block; width: 100%; height: min(62dvh, 42vw); object-fit: cover; opacity: .82; transition: opacity .4s, transform .9s var(--trykk); }
+.ny-neste__tekst { position: absolute; left: clamp(1.25rem, 3vw, 3rem); bottom: clamp(1.25rem, 3vw, 3rem); display: grid; gap: .4rem; }
+.ny-neste__etikett { font-size: var(--sc-liten); color: rgba(255, 255, 255, .82); }
+.ny-neste__navn { font-size: var(--sc-h2); letter-spacing: -0.028em; line-height: 1.04; }
+.ny-neste__alle { justify-self: start; color: var(--blekk); font-size: var(--sc-liten); text-underline-offset: .2em; }
+@media (hover: hover) {
+	.ny-neste > a:first-child:hover .ny-neste__img { opacity: .95; transform: scale(1.015); }
+}
+
+/* Inntoning når scenen kommer inn (bare med JS, og mykere med redusert bevegelse) --------------- */
+.med-js .ny-avslor .sc-inn { opacity: 0; transform: translate3d(0, 28px, 0); transition: opacity .9s var(--trykk), transform 1.1s var(--trykk); }
+.med-js .ny-avslor .sc.er-synlig .sc-inn { opacity: 1; transform: none; }
+.med-js .ny-avslor .sc.er-synlig .sc-inn + .sc-inn,
+.med-js .ny-avslor .sc.er-synlig .sc__par .sc-inn:nth-child(2) { transition-delay: .12s; }
+.med-js .ny-avslor .sc__prosjekter li:nth-child(n+3) { transition-delay: .18s; }
+.sc--hero .sc__img { transform-origin: 50% 60%; }
+@media (prefers-reduced-motion: no-preference) {
+	.med-js .sc--hero .sc__img { animation: ny-ankomst 2.4s var(--trykk) both; }
+}
+@keyframes ny-ankomst { from { transform: scale(1.06); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+	.med-js .ny-avslor .sc-inn { transform: none; transition: opacity .3s linear; }
+	.ny-neste__img { transition: opacity .3s; }
+	.ny-neste > a:first-child:hover .ny-neste__img { transform: none; }
+}
+
+/* Mobil: én spalte, alt stables ----------------------------------------------------------------- */
+@media (max-width: 767px) {
+	.sc--statement, .sc--bilde-tekst, .sc--bilde, .sc--par, .sc--om, .sc--studios .sc__tekst { display: block; }
+	.sc--statement { min-height: 0; }
+	.sc--statement .sc__media { margin-top: 2.5rem; transform: none; width: 72%; margin-left: auto; }
+	.sc--studios .sc__media { height: 62vh; }
+	.sc--studios .sc__h { margin-bottom: 1.5rem; }
+	.sc__byer { grid-template-columns: 1fr; gap: 1.25rem; }
+	.sc--bilde-tekst { min-height: 0; }
+	.sc--bilde-tekst .sc__media, .sc--bilde-tekst.sc--b .sc__media { height: 70vh; margin: 0 calc(var(--kant) * -1) 2rem; }
+	.sc--bilde-tekst .sc__tekst, .sc--bilde-tekst.sc--b .sc__tekst { padding: 0; }
+	.sc--bilde.sc--a .sc__media { height: auto; aspect-ratio: 4 / 3; }
+	.sc--bilde.sc--b .sc__media { height: auto; aspect-ratio: 4 / 3; margin: 0 calc(var(--kant) * -1) 0 0; }
+	.sc--bilde .sc__tekst, .sc--bilde.sc--a .sc__tekst { padding: 1rem 0 0; }
+	.sc--bilde.sc--a .sc__tekst { padding-inline: var(--kant); }
+	.sc--bilde:has(.sc__h) .sc__tekst { padding: 0 var(--kant) 1.25rem; }
+	.sc--bilde.sc--b:has(.sc__h) .sc__tekst { padding: 0 0 1.25rem; }
+	.sc--bilde.sc--b:has(.sc__h) .sc__media { height: auto; aspect-ratio: 4 / 3; }
+	.sc--bilde:has(.sc__h) { display: flex; flex-direction: column; }
+	.sc--bilde:has(.sc__h) .sc__tekst { order: -1; align-self: stretch; }
+	.sc--staende-a .sc__media, .sc--staende-b .sc__media { height: auto; width: 82%; max-height: none; aspect-ratio: 4 / 5; }
+	.sc--staende-b .sc__media { margin-left: auto; }
+	.sc__par { grid-template-columns: 1fr 1fr; gap: 10px; }
+	.sc__par .sc__media { height: auto; aspect-ratio: 3 / 4; }
+	.sc__par .sc__media:nth-child(2) { margin-top: 2.5rem; }
+	.sc--par .sc__tekst { margin-top: 1.25rem; }
+	.sc__prosjekter { grid-template-columns: 1fr; }
+	.sc--om .sc__tekst { margin-bottom: 2rem; }
+	.sc__fakta { grid-template-columns: 1fr; gap: 1.1rem; margin-bottom: 2.5rem; }
+	.ny-neste__img { height: 52vh; }
+}
+
+/* «+ Presentation»: liten pille nede til høyre ------------------------------------------------- */
+.ny-legg {
+	position: fixed; right: var(--kant); bottom: max(var(--kant), env(safe-area-inset-bottom)); z-index: 30;
+	display: flex; align-items: center; gap: 6px; padding: 5px;
+	background: rgba(242, 239, 234, .78); -webkit-backdrop-filter: blur(18px) saturate(160%); backdrop-filter: blur(18px) saturate(160%);
+	border: 1px solid rgba(255, 255, 255, .5); border-radius: var(--pille);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55), 0 6px 24px rgba(30, 28, 25, .12);
+	transform: translateY(0); transition: transform .5s var(--trykk), opacity .4s;
+}
+.ny-legg[hidden] { display: none; }
+.ny-legg.er-borte { transform: translateY(140%); opacity: 0; visibility: hidden; pointer-events: none; transition: transform .5s var(--trykk), opacity .4s, visibility 0s .5s; }
+.ny-legg__knapp, .ny-legg__apne {
+	display: inline-flex; align-items: center; gap: .45rem; min-height: 40px; padding: 0 1rem; border: 0; border-radius: var(--pille);
+	font: inherit; font-size: var(--sc-liten); line-height: 1; color: var(--blekk); background: transparent; cursor: pointer; text-decoration: none;
+	transition: background-color .2s, transform .12s var(--trykk);
+}
+.ny-legg__knapp:active, .ny-legg__apne:active { transform: scale(.96); }
+.ny-legg__tegn { display: inline-block; font-size: 1.15em; transition: transform .35s var(--trykk); }
+.ny-legg__knapp[aria-pressed="true"] { background: var(--signal); }
+.ny-legg__knapp[aria-pressed="true"] .ny-legg__tegn { transform: rotate(45deg); }
+.ny-legg__apne { background: var(--blekk); color: var(--bunn); }
+.ny-legg__apne[hidden] { display: none; }
+@media (hover: hover) { .ny-legg__knapp:hover { background: rgba(30, 28, 25, .07); } .ny-legg__knapp[aria-pressed="true"]:hover { background: var(--signal); } }
+@media (prefers-reduced-transparency: reduce) { .ny-legg { background: var(--bunn); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+
+.uten-js .ny-js { display: none !important; }
+.ny :focus-visible { outline: 2px solid var(--blekk); outline-offset: 3px; }
+.sc--hero :focus-visible { outline-color: #FFFFFF; }
+
+/* Oversikt /ny/projects/ ------------------------------------------------------------------------ */
+.ny-oversikt { padding: calc(var(--hode-h) + clamp(2rem, 5vw, 5rem)) var(--kant) var(--sc-luft); }
+.ny-oversikt__topp { margin-bottom: clamp(2.5rem, 5vw, 4.5rem); }
+.ny-oversikt__h, .ny-red__h { margin: 0; font-weight: 400; font-size: var(--sc-h); line-height: 1; letter-spacing: -0.034em; }
+.ny-oversikt__p, .ny-red__p { margin: 1.1rem 0 0; max-width: 52ch; font-size: var(--sc-tekst); line-height: 1.55; color: var(--gra); }
+.ny-oversikt__liste { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(2.25rem, 4vw, 3.5rem) var(--luke); }
+.ny-kort { position: relative; container-type: inline-size; }
+.ny-kort__lenke { display: block; color: inherit; text-decoration: none; }
+.ny-kort__img { display: block; width: 100%; aspect-ratio: 3 / 2; object-fit: cover; background: var(--kalk); transition: opacity .3s; }
+.ny-kort__navn { display: block; margin-top: .85rem; padding-right: 6.5rem; font-size: var(--sc-ing); letter-spacing: -0.01em; line-height: 1.25; }
+.ny-kort__sub { display: block; margin-top: .2rem; padding-right: 6.5rem; font-size: var(--sc-liten); color: var(--gra); }
+@media (min-width: 1024px) {
+	/* Introen tar 2 x 2 ruter, så de elleve prosjektene fyller rutenettet uten hull. */
+	.ny-kort--intro { grid-column: span 2; grid-row: span 2; display: flex; flex-direction: column; }
+	.ny-kort--intro .ny-kort__lenke { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+	.ny-kort--intro .ny-kort__img { flex: 1; aspect-ratio: auto; min-height: 0; height: 100%; }
+	.ny-kort--intro .ny-kort__velg { top: auto; bottom: .1rem; }
+	.ny-kort--intro .ny-kort__navn { font-size: var(--sc-h2); letter-spacing: -0.028em; }
+}
+@media (hover: hover) { .ny-kort__lenke:hover .ny-kort__img { opacity: .86; } .ny-kort__lenke:hover .ny-kort__navn { text-decoration: underline; text-underline-offset: .18em; text-decoration-thickness: 1px; } }
+.ny-kort__velg {
+	position: absolute; right: 0; top: calc(66.667cqw + .6rem); display: inline-flex; align-items: center; gap: .5rem;
+	min-height: 36px; padding: 0 .85rem 0 .6rem; border-radius: var(--pille); border: 1px solid var(--linje);
+	font-size: var(--sc-liten); cursor: pointer; user-select: none; transition: background-color .2s, border-color .2s, transform .12s var(--trykk);
+}
+.ny-kort__velg:active { transform: scale(.96); }
+.ny-kort__velg input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.ny-kort__boks { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--gra); display: grid; place-items: center; transition: background-color .2s, border-color .2s; }
+.ny-kort__velg:has(input:checked) { background: var(--signal); border-color: var(--signal); }
+.ny-kort__velg input:checked + .ny-kort__boks { background: var(--blekk); border-color: var(--blekk); }
+.ny-kort__velg input:checked + .ny-kort__boks::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--signal); }
+.ny-kort__velg:has(input:focus-visible) { outline: 2px solid var(--blekk); outline-offset: 2px; }
+.ny-kort__velgtekst { white-space: nowrap; }
+.ny-kort__pa, .ny-kort__velg:has(input:checked) .ny-kort__av { display: none; }
+.ny-kort__velg:has(input:checked) .ny-kort__pa { display: inline; }
+.ny-kort__nr { font-variant-numeric: tabular-nums; }
+@media (hover: hover) { .ny-kort__velg:hover { border-color: var(--blekk); } }
+
+.ny-linje {
+	position: fixed; left: 50%; bottom: max(var(--kant), env(safe-area-inset-bottom)); z-index: 30; transform: translateX(-50%);
+	display: flex; align-items: center; gap: .5rem; padding: 6px 6px 6px 1.25rem; border-radius: var(--pille);
+	background: rgba(30, 28, 25, .86); color: var(--bunn); -webkit-backdrop-filter: blur(18px) saturate(160%); backdrop-filter: blur(18px) saturate(160%);
+	box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12), 0 10px 30px rgba(30, 28, 25, .25);
+	transition: transform .5s var(--trykk), opacity .3s;
+}
+.ny-linje[hidden] { display: none; }
+.ny-linje__antall { margin: 0 .5rem 0 0; font-size: var(--sc-liten); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ny-linje__tom, .ny-linje__start { min-height: 40px; padding: 0 1.1rem; border: 0; border-radius: var(--pille); font: inherit; font-size: var(--sc-liten); cursor: pointer; white-space: nowrap; transition: transform .12s var(--trykk), background-color .2s; }
+.ny-linje__tom { background: transparent; color: var(--bunn); }
+.ny-linje__start { background: var(--signal); color: var(--blekk); }
+.ny-linje__tom:active, .ny-linje__start:active { transform: scale(.96); }
+@media (hover: hover) { .ny-linje__tom:hover { background: rgba(255, 255, 255, .1); } }
+@media (max-width: 1023px) { .ny-oversikt__liste { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 599px) {
+	.ny-oversikt__liste { grid-template-columns: 1fr; }
+	.ny-kort__navn, .ny-kort__sub { padding-right: 0; }
+	.ny-kort__velg { position: static; margin-top: .85rem; }
+	.ny-linje { left: var(--kant); right: var(--kant); transform: none; justify-content: flex-end; }
+	.ny-linje__antall { margin-right: auto; }
+}
+

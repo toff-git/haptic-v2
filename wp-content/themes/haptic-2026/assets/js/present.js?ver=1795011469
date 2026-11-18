@@ -1,0 +1,831 @@
+/**
+ * Haptic v2: /ny/present/ (redigering, avspiller og presentatørvisning).
+ * Ingen server-kall: scenene ligger som skjult DOM i siden ([data-ny-bibliotek]), utvalget i URL-en og localStorage.
+ * Virker derfor også i den statiske kopien (GitHub Pages). Vanilla, ingen avhengigheter.
+ */
+(function () {
+	'use strict';
+
+	var bib = document.querySelector('[data-ny-bibliotek]');
+	var red = document.querySelector('[data-ny-red]');
+	if (!bib || !red) { return; }
+
+	var NOKKEL_UTVALG = 'hapticNy.utvalg';
+	var NOKKEL_LAGRET = 'hapticNy.lagret';
+	var rolig = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+	function erRolig() { return !!(rolig && rolig.matches); }
+
+	/* ---------- Lagring (alltid try/catch) ---------- */
+	function les(nokkel, standard) {
+		try { var v = window.localStorage.getItem(nokkel); return v ? JSON.parse(v) : standard; } catch (e) { return standard; }
+	}
+	function skriv(nokkel, verdi) {
+		try { window.localStorage.setItem(nokkel, JSON.stringify(verdi)); return true; } catch (e) { return false; }
+	}
+
+	/* ---------- Biblioteket ---------- */
+	var stokker = {};
+	var rekkefolge = [];
+	Array.prototype.forEach.call(bib.querySelectorAll('[data-stokk]'), function (el) {
+		var slug = el.getAttribute('data-stokk');
+		var scener = Array.prototype.slice.call(el.querySelectorAll('section[data-sc]'));
+		var forsteImg = el.querySelector('img');
+		var knappImg = red.querySelector('[data-ny-add="' + slug + '"] img');
+		stokker[slug] = {
+			slug: slug,
+			navn: el.getAttribute('data-navn') || slug,
+			scener: scener,
+			bilde: (knappImg && (knappImg.currentSrc || knappImg.src)) || (forsteImg && forsteImg.src) || ''
+		};
+		rekkefolge.push(slug);
+	});
+	function gyldig(liste) {
+		var sett = {};
+		return (liste || []).filter(function (s) {
+			if (typeof s !== 'string' || !stokker[s] || sett[s]) { return false; }
+			sett[s] = true; return true;
+		});
+	}
+
+	/* ---------- Tilstand fra URL eller localStorage ---------- */
+	var q = new URLSearchParams(window.location.search);
+	var fraUrl = [];
+	q.getAll('d').forEach(function (v) { v.split(',').forEach(function (s) { s = s.trim(); if (s) { fraUrl.push(s); } }); });
+	var tilstand = {
+		d: gyldig(fraUrl.length ? fraUrl : les(NOKKEL_UTVALG, [])),
+		navn: q.get('n') || '',
+		t: Math.max(0, parseInt(q.get('t'), 10) || 0)
+	};
+	var startVis = q.get('vis');
+	var startI = Math.max(0, parseInt(q.get('i'), 10) || 0);
+
+	/* ---------- Elementer i redigeringen ---------- */
+	var elListe = red.querySelector('[data-ny-rek]');
+	var elTomt = red.querySelector('[data-ny-tomt]');
+	var elSum = red.querySelector('[data-ny-sum]');
+	var elNavn = red.querySelector('[data-ny-navn]');
+	var elSpill = red.querySelector('[data-ny-spill]');
+	var elPresenter = red.querySelector('[data-ny-presenter]');
+	var elAuto = red.querySelector('[data-ny-auto]');
+	var elKopier = red.querySelector('[data-ny-kopier]');
+	var elLagre = red.querySelector('[data-ny-lagre]');
+	var elMelding = red.querySelector('[data-ny-melding]');
+	var elLagretBoks = red.querySelector('[data-ny-lagret-boks]');
+	var elLagret = red.querySelector('[data-ny-lagret]');
+	var bibKnapper = red.querySelectorAll('[data-ny-add]');
+
+	if (elNavn) { elNavn.value = tilstand.navn; }
+	if (elAuto) {
+		var finnes = Array.prototype.some.call(elAuto.options, function (o) { return +o.value === tilstand.t; });
+		if (!finnes && tilstand.t) {
+			var o = document.createElement('option'); o.value = String(tilstand.t); o.textContent = 'Every ' + tilstand.t + ' s'; elAuto.appendChild(o);
+		}
+		elAuto.value = String(tilstand.t);
+	}
+
+	function antallLysbilder(d) { return d.reduce(function (n, s) { return n + stokker[s].scener.length; }, 0); }
+
+	function lenke(d, ekstra) {
+		var p = new URLSearchParams();
+		if (d.length) { p.set('d', d.join(',')); }
+		if (tilstand.navn) { p.set('n', tilstand.navn); }
+		if (tilstand.t) { p.set('t', String(tilstand.t)); }
+		if (ekstra) { Object.keys(ekstra).forEach(function (k) { p.set(k, ekstra[k]); }); }
+		var s = p.toString().replace(/%2C/g, ',');
+		return window.location.pathname + (s ? '?' + s : '');
+	}
+
+	var meldingTid = 0;
+	function melding(tekst, angre) {
+		if (!elMelding) { return; }
+		elMelding.textContent = tekst;
+		if (angre) {
+			var b = document.createElement('button');
+			b.type = 'button'; b.className = 'ny-lenkeknapp ny-red__angre'; b.textContent = 'Undo';
+			b.addEventListener('click', function () { angre(); elMelding.textContent = ''; });
+			elMelding.appendChild(document.createTextNode(' '));
+			elMelding.appendChild(b);
+		}
+		clearTimeout(meldingTid);
+		meldingTid = setTimeout(function () { elMelding.textContent = ''; }, angre ? 7000 : 3200);
+	}
+
+	function lagre() {
+		skriv(NOKKEL_UTVALG, tilstand.d);
+		try { window.history.replaceState(null, '', lenke(tilstand.d)); } catch (e) { /* file:// o.l. */ }
+	}
+
+	/* ---------- Rader ---------- */
+	function lagRad(slug, i, n) {
+		var s = stokker[slug];
+		var li = document.createElement('li');
+		li.className = 'ny-rek__rad';
+		li.tabIndex = 0;
+		li.setAttribute('data-slug', slug);
+		li.setAttribute('aria-label', (i + 1) + ' of ' + n + ': ' + s.navn + ', ' + s.scener.length + ' slides');
+
+		var hank = document.createElement('button');
+		hank.type = 'button'; hank.className = 'ny-rek__hank'; hank.tabIndex = -1;
+		hank.setAttribute('aria-label', 'Drag to move ' + s.navn);
+		li.appendChild(hank);
+
+		var img = document.createElement('img');
+		img.className = 'ny-rek__img'; img.alt = ''; img.src = s.bilde; img.decoding = 'async'; img.draggable = false;
+		li.appendChild(img);
+
+		var tekst = document.createElement('div');
+		var navn = document.createElement('span'); navn.className = 'ny-rek__navn'; navn.textContent = s.navn;
+		var ant = document.createElement('span'); ant.className = 'ny-rek__antall'; ant.textContent = s.scener.length + ' slides';
+		tekst.appendChild(navn); tekst.appendChild(ant);
+		li.appendChild(tekst);
+
+		var knapper = document.createElement('div'); knapper.className = 'ny-rek__knapper';
+		[['data-rek-opp', '↑', 'Move ' + s.navn + ' up', i === 0],
+			['data-rek-ned', '↓', 'Move ' + s.navn + ' down', i === n - 1],
+			['data-rek-fjern', 'Remove', 'Remove ' + s.navn, false]].forEach(function (k) {
+			var b = document.createElement('button');
+			b.type = 'button'; b.setAttribute(k[0], ''); b.textContent = k[1]; b.setAttribute('aria-label', k[2]); b.tabIndex = -1;
+			if (k[3]) { b.disabled = true; }
+			knapper.appendChild(b);
+		});
+		li.appendChild(knapper);
+		return li;
+	}
+
+	/* FLIP: radene glir fra gammel til ny plass i stedet for å hoppe. */
+	function posisjoner() {
+		var m = {};
+		Array.prototype.forEach.call(elListe.children, function (li) { m[li.getAttribute('data-slug')] = li.getBoundingClientRect().top; });
+		return m;
+	}
+	function tegn(forrige, fokusSlug) {
+		var n = tilstand.d.length;
+		elListe.textContent = '';
+		tilstand.d.forEach(function (slug, i) { elListe.appendChild(lagRad(slug, i, n)); });
+		if (elTomt) { elTomt.hidden = n > 0; }
+		var lys = antallLysbilder(tilstand.d);
+		if (elSum) { elSum.textContent = n ? lys + (lys === 1 ? ' slide' : ' slides') : ''; }
+		[elSpill, elPresenter, elKopier, elLagre].forEach(function (b) { if (b) { b.disabled = n === 0; } });
+		Array.prototype.forEach.call(bibKnapper, function (b) {
+			var inne = tilstand.d.indexOf(b.getAttribute('data-ny-add')) > -1;
+			b.setAttribute('aria-pressed', inne ? 'true' : 'false');
+		});
+		if (forrige && !erRolig()) {
+			Array.prototype.forEach.call(elListe.children, function (li) {
+				var fra = forrige[li.getAttribute('data-slug')];
+				if (fra === undefined) { return; }
+				var dy = fra - li.getBoundingClientRect().top;
+				if (!dy) { return; }
+				li.style.transition = 'none';
+				li.style.transform = 'translate3d(0,' + dy + 'px,0)';
+				li.getBoundingClientRect();
+				li.style.transition = '';
+				li.style.transform = '';
+			});
+		}
+		if (fokusSlug) {
+			var f = elListe.querySelector('[data-slug="' + fokusSlug + '"]');
+			if (f) { f.focus({ preventScroll: false }); }
+		}
+	}
+	function endre(nyListe, fokusSlug) {
+		var forrige = posisjoner();
+		tilstand.d = nyListe;
+		lagre();
+		tegn(forrige, fokusSlug);
+	}
+	function flytt(slug, steg) {
+		var i = tilstand.d.indexOf(slug), j = i + steg;
+		if (i < 0 || j < 0 || j >= tilstand.d.length) { return; }
+		var ny = tilstand.d.slice(); ny.splice(i, 1); ny.splice(j, 0, slug);
+		endre(ny, slug);
+		melding(stokker[slug].navn + ' moved to ' + (j + 1) + ' of ' + ny.length + '.');
+	}
+	function fjern(slug) {
+		var gammel = tilstand.d.slice();
+		var i = gammel.indexOf(slug);
+		var nesteFokus = gammel[i + 1] || gammel[i - 1];
+		endre(gammel.filter(function (s) { return s !== slug; }), nesteFokus);
+		melding(stokker[slug].navn + ' removed.', function () { endre(gammel, slug); });
+	}
+
+	elListe.addEventListener('click', function (e) {
+		var b = e.target.closest('button'); if (!b) { return; }
+		var slug = b.closest('[data-slug]').getAttribute('data-slug');
+		if (b.hasAttribute('data-rek-opp')) { flytt(slug, -1); }
+		else if (b.hasAttribute('data-rek-ned')) { flytt(slug, 1); }
+		else if (b.hasAttribute('data-rek-fjern')) { fjern(slug); }
+	});
+	elListe.addEventListener('keydown', function (e) {
+		var li = e.target.closest && e.target.closest('.ny-rek__rad');
+		if (!li || e.target !== li) { return; }
+		var slug = li.getAttribute('data-slug');
+		if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); flytt(slug, e.key === 'ArrowUp' ? -1 : 1); }
+		else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+			e.preventDefault();
+			var nabo = e.key === 'ArrowUp' ? li.previousElementSibling : li.nextElementSibling;
+			if (nabo) { nabo.focus(); }
+		} else if (e.key === 'Delete' || e.key === 'Backspace') { e.preventDefault(); fjern(slug); }
+	});
+
+	/* Dra: raden følger fingeren 1:1 fra der den ble grepet; de andre viker til side. */
+	elListe.addEventListener('pointerdown', function (e) {
+		var hank = e.target.closest('.ny-rek__hank');
+		if (!hank || (e.pointerType === 'mouse' && e.button !== 0)) { return; }
+		e.preventDefault();
+		var li = hank.closest('.ny-rek__rad');
+		var rader = Array.prototype.slice.call(elListe.children);
+		var fra = rader.indexOf(li);
+		var rekt = rader.map(function (r) { return r.getBoundingClientRect(); });
+		var h = rekt[fra].height;
+		var startY = e.clientY;
+		var til = fra;
+		hank.setPointerCapture(e.pointerId);
+		li.classList.add('er-dratt');
+		rader.forEach(function (r, i) { if (i !== fra) { r.style.transition = erRolig() ? 'none' : ''; } });
+
+		function flyttPeker(ev) {
+			var dy = ev.clientY - startY;
+			var forste = rekt[0].top, siste = rekt[rekt.length - 1].bottom;
+			var topp = rekt[fra].top + dy;
+			// Mykt mot endene (gummistrikk) i stedet for en hard stopp.
+			if (topp < forste) { var o = forste - topp; dy += o - o * 0.35; }
+			if (topp + h > siste) { var o2 = topp + h - siste; dy -= o2 - o2 * 0.35; }
+			li.style.transform = 'translate3d(0,' + dy + 'px,0)';
+			var midt = rekt[fra].top + h / 2 + dy;
+			til = fra;
+			for (var i = 0; i < rekt.length; i++) {
+				if (i < fra && midt < rekt[i].top + rekt[i].height / 2) { til = Math.min(til, i); }
+				if (i > fra && midt > rekt[i].top + rekt[i].height / 2) { til = Math.max(til, i); }
+			}
+			rader.forEach(function (r, i) {
+				if (i === fra) { return; }
+				var skyv = 0;
+				if (fra < til && i > fra && i <= til) { skyv = -h; }
+				if (til < fra && i >= til && i < fra) { skyv = h; }
+				r.style.transform = skyv ? 'translate3d(0,' + skyv + 'px,0)' : '';
+			});
+		}
+		function slipp() {
+			hank.removeEventListener('pointermove', flyttPeker);
+			hank.removeEventListener('pointerup', slipp);
+			hank.removeEventListener('pointercancel', slipp);
+			var forrige = posisjoner(); // inkluderer dagens transform, så alt glir videre derfra
+			li.classList.remove('er-dratt');
+			rader.forEach(function (r) { r.style.transform = ''; r.style.transition = ''; });
+			if (til === fra) { tegn(forrige, li.getAttribute('data-slug')); return; }
+			var slug = li.getAttribute('data-slug');
+			var ny = tilstand.d.slice(); ny.splice(fra, 1); ny.splice(til, 0, slug);
+			tilstand.d = ny; lagre(); tegn(forrige, slug);
+			melding(stokker[slug].navn + ' moved to ' + (til + 1) + ' of ' + ny.length + '.');
+		}
+		hank.addEventListener('pointermove', flyttPeker);
+		hank.addEventListener('pointerup', slipp);
+		hank.addEventListener('pointercancel', slipp);
+	});
+
+	Array.prototype.forEach.call(bibKnapper, function (b) {
+		b.addEventListener('click', function () {
+			var slug = b.getAttribute('data-ny-add');
+			if (tilstand.d.indexOf(slug) > -1) { endre(tilstand.d.filter(function (s) { return s !== slug; })); melding(stokker[slug].navn + ' removed.'); }
+			else { endre(tilstand.d.concat([slug])); melding(stokker[slug].navn + ' added.'); }
+		});
+	});
+
+	if (elNavn) {
+		elNavn.addEventListener('input', function () { tilstand.navn = elNavn.value.trim(); lagre(); });
+		elNavn.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); elNavn.blur(); } });
+	}
+	if (elAuto) { elAuto.addEventListener('change', function () { tilstand.t = +elAuto.value || 0; lagre(); }); }
+
+	/* ---------- Kopier lenke ---------- */
+	function fullLenke() { return window.location.origin === 'null' ? window.location.href : window.location.origin + lenke(tilstand.d); }
+	if (elKopier) {
+		elKopier.addEventListener('click', function () {
+			var url = fullLenke();
+			function reserve() {
+				var t = document.createElement('textarea');
+				t.value = url; t.setAttribute('readonly', ''); t.style.position = 'fixed'; t.style.opacity = '0';
+				document.body.appendChild(t); t.select();
+				var ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+				document.body.removeChild(t);
+				melding(ok ? 'Link copied.' : 'Copy this link: ' + url);
+			}
+			if (navigator.clipboard && window.isSecureContext) {
+				navigator.clipboard.writeText(url).then(function () { melding('Link copied.'); }, reserve);
+			} else { reserve(); }
+		});
+	}
+
+	/* ---------- Lagrede presentasjoner ---------- */
+	function lagrede() { var l = les(NOKKEL_LAGRET, []); return Array.isArray(l) ? l : []; }
+	function dato(iso) {
+		try { return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }); } catch (e) { return ''; }
+	}
+	function tegnLagrede() {
+		if (!elLagret) { return; }
+		var liste = lagrede();
+		elLagret.textContent = '';
+		if (elLagretBoks) { elLagretBoks.hidden = liste.length === 0; }
+		liste.forEach(function (p, i) {
+			var d = gyldig(p.d);
+			var li = document.createElement('li');
+			var a = document.createElement('a');
+			var params = new URLSearchParams();
+			params.set('d', d.join(','));
+			if (p.navn) { params.set('n', p.navn); }
+			if (p.t) { params.set('t', String(p.t)); }
+			a.href = window.location.pathname + '?' + params.toString().replace(/%2C/g, ',');
+			a.textContent = p.navn || 'Untitled';
+			var info = document.createElement('span');
+			info.textContent = antallLysbilder(d) + ' slides, ' + dato(p.tid);
+			var slett = document.createElement('button');
+			slett.type = 'button'; slett.textContent = 'Delete'; slett.setAttribute('aria-label', 'Delete ' + (p.navn || 'Untitled'));
+			slett.addEventListener('click', function () {
+				var alle = lagrede(); var borte = alle.splice(i, 1)[0];
+				skriv(NOKKEL_LAGRET, alle); tegnLagrede();
+				melding('Deleted "' + (borte.navn || 'Untitled') + '".', function () {
+					var naa = lagrede(); naa.splice(Math.min(i, naa.length), 0, borte); skriv(NOKKEL_LAGRET, naa); tegnLagrede();
+				});
+			});
+			li.appendChild(a); li.appendChild(info); li.appendChild(slett);
+			elLagret.appendChild(li);
+		});
+	}
+	if (elLagre) {
+		elLagre.addEventListener('click', function () {
+			if (!tilstand.d.length) { return; }
+			if (!tilstand.navn) {
+				melding('Give it a name first.');
+				if (elNavn) { elNavn.focus(); }
+				return;
+			}
+			var alle = lagrede().filter(function (p) { return p.navn !== tilstand.navn; });
+			alle.unshift({ navn: tilstand.navn, d: tilstand.d.slice(), t: tilstand.t, tid: new Date().toISOString() });
+			melding(skriv(NOKKEL_LAGRET, alle) ? 'Saved on this computer.' : 'Could not save here. Copy the link instead.');
+			tegnLagrede();
+		});
+	}
+
+	/* =====================================================================================
+	 * Avspiller
+	 * =================================================================================== */
+	var spill = null;      // rot-elementet når avspilleren er åpen
+	var lys = [];          // flat liste: {slug, nr, el, navn}
+	var idx = 0;
+	var autoSek = 0;
+	var autoStart = 0, autoRaf = 0;
+	var presenter = false;
+	var startTid = 0, tidPause = 0, tidStoppet = false, klokkeTimer = 0;
+	var stilleTimer = 0;
+	var ui = {};
+	var egenId = Math.random().toString(36).slice(2);
+	var kanal = null;
+	var nokkelDeck = '';
+	var vi_fullskjerm = false;
+
+	function byggLysbilder() {
+		lys = [];
+		tilstand.d.forEach(function (slug) {
+			stokker[slug].scener.forEach(function (el, nr) { lys.push({ slug: slug, nr: nr, el: el, navn: stokker[slug].navn }); });
+		});
+		nokkelDeck = tilstand.d.join(',');
+	}
+
+	function klon(i) {
+		var kilde = lys[i].el;
+		var sc = kilde.cloneNode(true);
+		var notat = sc.querySelector('template.sc__notat');
+		if (notat) { notat.parentNode.removeChild(notat); }
+		Array.prototype.forEach.call(sc.querySelectorAll('img'), function (img) { img.loading = 'eager'; img.removeAttribute('loading'); img.draggable = false; });
+		Array.prototype.forEach.call(sc.querySelectorAll('a'), function (a) { a.tabIndex = -1; });
+		Array.prototype.forEach.call(sc.querySelectorAll('[id]'), function (n) { n.removeAttribute('id'); });
+		var boks = document.createElement('div');
+		boks.className = 'spill__lysbilde';
+		boks.setAttribute('data-i', String(i));
+		boks.appendChild(sc);
+		return boks;
+	}
+	function notatFor(i) {
+		var t = lys[i] && lys[i].el.querySelector('template.sc__notat');
+		if (!t) { return ''; }
+		return (t.content ? t.content.textContent : t.textContent).trim();
+	}
+	var forhand = {};
+	function forhandslast(i) {
+		if (!lys[i]) { return; }
+		Array.prototype.forEach.call(lys[i].el.querySelectorAll('img'), function (img) {
+			var src = img.getAttribute('src');
+			if (!src || forhand[src]) { return; }
+			var bilde = new Image(); bilde.decoding = 'async'; bilde.src = src; forhand[src] = bilde;
+		});
+	}
+
+	function knapp(tekst, etikett, klasse) {
+		var b = document.createElement('button');
+		b.type = 'button'; b.textContent = tekst;
+		if (etikett) { b.setAttribute('aria-label', etikett); b.title = etikett; }
+		if (klasse) { b.className = klasse; }
+		return b;
+	}
+	function el(tag, klasse, tekst) {
+		var n = document.createElement(tag);
+		if (klasse) { n.className = klasse; }
+		if (tekst) { n.textContent = tekst; }
+		return n;
+	}
+
+	function byggSpill() {
+		ui = {};
+		spill = el('div', 'spill');
+		spill.setAttribute('role', 'dialog');
+		spill.setAttribute('aria-modal', 'true');
+		spill.setAttribute('aria-label', (tilstand.navn || 'Presentation') + ', slideshow');
+		spill.tabIndex = -1;
+
+		ui.scene = el('div', 'spill__scene');
+		ui.fram = el('div', 'spill__fram');
+		ui.framLys = el('span'); ui.framAuto = el('i');
+		ui.fram.appendChild(ui.framAuto); ui.fram.appendChild(ui.framLys);
+
+		ui.kontroll = el('div', 'spill__kontroll');
+		ui.forrige = knapp('←', 'Previous slide (Left arrow)');
+		ui.neste = knapp('→', 'Next slide (Right arrow or Space)');
+		ui.teller = el('span', 'spill__teller');
+		ui.auto = knapp('Auto', 'Advance automatically (A)');
+		ui.autoValg = el('select', 'spill__autovalg');
+		ui.autoValg.setAttribute('aria-label', 'Seconds per slide');
+		[5, 8, 12, 20, 30].forEach(function (s) { var o = el('option', '', s + ' s'); o.value = String(s); ui.autoValg.appendChild(o); });
+		ui.notater = knapp('Notes', 'Presenter view with notes (P)');
+		ui.vindu = knapp('Presenter window', 'Open the presenter view in its own window');
+		ui.lukk = knapp('Close', 'Leave the presentation (Esc)');
+		[ui.forrige, ui.teller, ui.neste, ui.auto, ui.autoValg, ui.notater, ui.vindu, ui.lukk].forEach(function (n) { ui.kontroll.appendChild(n); });
+
+		ui.live = el('div', 'spill__live');
+		ui.live.setAttribute('aria-live', 'polite');
+		ui.live.setAttribute('role', 'status');
+
+		/* Presentatørvisning */
+		ui.pv = el('div', 'spill__presenter');
+		var topp = el('div', 'pv__topp');
+		ui.pvStokk = el('span', 'pv__stokk');
+		ui.pvKlokke = el('span', 'pv__klokke');
+		ui.pvTid = knapp('0:00', 'Elapsed time. Click to pause, double-click to reset', 'pv__tid');
+		topp.appendChild(ui.pvStokk); topp.appendChild(ui.pvKlokke); topp.appendChild(ui.pvTid);
+		var na = el('div', 'pv__na');
+		na.appendChild(el('span', 'pv__etikett', 'Now'));
+		ui.pvNa = el('div', 'pv__ramme');
+		na.appendChild(ui.pvNa);
+		var side = el('div', 'pv__side');
+		var neste = el('div', 'pv__neste');
+		neste.appendChild(el('span', 'pv__etikett', 'Next'));
+		ui.pvNeste = el('div', 'pv__ramme');
+		neste.appendChild(ui.pvNeste);
+		var notat = el('div', 'pv__notat');
+		notat.appendChild(el('span', 'pv__etikett', 'Notes'));
+		ui.pvTekst = el('p', 'pv__tekst');
+		notat.appendChild(ui.pvTekst);
+		side.appendChild(neste); side.appendChild(notat);
+		var bunn = el('div', 'pv__bunn');
+		ui.pvForrige = knapp('Back', 'Previous slide');
+		ui.pvNesteKnapp = knapp('Next', 'Next slide', 'pv__neste-knapp');
+		ui.pvTeller = el('span', 'pv__teller');
+		ui.pvVindu = knapp('Open presenter window', 'Open the presenter view in its own window', 'pv__hoyre');
+		ui.pvPublikum = knapp('Audience view', 'Back to the audience view (P)');
+		ui.pvLukk = knapp('Close', 'Leave the presentation (Esc)');
+		[ui.pvForrige, ui.pvNesteKnapp, ui.pvTeller, ui.pvVindu, ui.pvPublikum, ui.pvLukk].forEach(function (n) { bunn.appendChild(n); });
+		[topp, na, side, bunn].forEach(function (n) { ui.pv.appendChild(n); });
+
+		[ui.scene, ui.fram, ui.kontroll, ui.pv, ui.live].forEach(function (n) { spill.appendChild(n); });
+
+		ui.forrige.addEventListener('click', function () { gaa(idx - 1); });
+		ui.neste.addEventListener('click', function () { gaa(idx + 1); });
+		ui.pvForrige.addEventListener('click', function () { gaa(idx - 1); });
+		ui.pvNesteKnapp.addEventListener('click', function () { gaa(idx + 1); });
+		ui.auto.addEventListener('click', function () { settAuto(autoSek ? 0 : (+ui.autoValg.value || 8)); });
+		ui.autoValg.addEventListener('change', function () { if (autoSek) { settAuto(+ui.autoValg.value); } });
+		ui.notater.addEventListener('click', function () { settPresenter(true); });
+		ui.pvPublikum.addEventListener('click', function () { settPresenter(false); });
+		ui.vindu.addEventListener('click', aapneVindu);
+		ui.pvVindu.addEventListener('click', aapneVindu);
+		ui.lukk.addEventListener('click', lukk);
+		ui.pvLukk.addEventListener('click', lukk);
+		if (erVindu) {
+			// Eget notatvindu: ingen vei til publikumsvisning her, og Close lukker vinduet.
+			ui.pvVindu.hidden = true; ui.pvPublikum.hidden = true;
+			ui.pvLukk.classList.add('pv__hoyre'); ui.pvLukk.textContent = 'Close window';
+		}
+		ui.pvTid.addEventListener('click', function () {
+			if (tidStoppet) { startTid += Date.now() - tidPause; tidStoppet = false; } else { tidPause = Date.now(); tidStoppet = true; }
+			tikk();
+		});
+		ui.pvTid.addEventListener('dblclick', function () { startTid = Date.now(); tidPause = startTid; tikk(); });
+
+		/* Klikk og sveip på selve lysbildet */
+		var ned = null;
+		ui.scene.addEventListener('pointerdown', function (e) {
+			if (e.pointerType === 'mouse' && e.button !== 0) { return; }
+			ned = { x: e.clientX, y: e.clientY, t: performance.now(), id: e.pointerId, dx: 0, sporer: false, hist: [{ x: e.clientX, t: performance.now() }] };
+		});
+		ui.scene.addEventListener('pointermove', function (e) {
+			if (!ned || e.pointerId !== ned.id) { return; }
+			var dx = e.clientX - ned.x, dy = e.clientY - ned.y;
+			ned.hist.push({ x: e.clientX, t: performance.now() }); if (ned.hist.length > 5) { ned.hist.shift(); }
+			if (!ned.sporer && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+				ned.sporer = true;
+				try { ui.scene.setPointerCapture(e.pointerId); } catch (er) { /* ok */ }
+			}
+			if (ned.sporer) {
+				ned.dx = dx;
+				var aktiv = ui.scene.querySelector('.spill__lysbilde.er-inne');
+				if (aktiv && !erRolig()) {
+					// Følger fingeren, men med motstand: det er en side, ikke et kort som skal kastes.
+					var kant = (dx > 0 && idx === 0) || (dx < 0 && idx === lys.length - 1);
+					var b = window.innerWidth;
+					var flytt = kant ? (dx * b * 0.15) / (b + 0.55 * Math.abs(dx)) : dx * 0.35;
+					aktiv.style.transition = 'none';
+					aktiv.style.transform = 'translate3d(' + flytt + 'px,0,0)';
+				}
+			}
+		});
+		function avslutt(e) {
+			if (!ned || e.pointerId !== ned.id) { return; }
+			var n = ned; ned = null;
+			var aktiv = ui.scene.querySelector('.spill__lysbilde.er-inne');
+			if (n.sporer) {
+				var h = n.hist, v = 0;
+				if (h.length > 1) { v = (h[h.length - 1].x - h[0].x) / Math.max(1, h[h.length - 1].t - h[0].t); }
+				// Velg retning ut fra fart og hvor langt det ville gått (projisert), ikke bare avstand.
+				var projisert = n.dx + v * 180;
+				var mal = Math.abs(projisert) > window.innerWidth * 0.12 ? (projisert < 0 ? idx + 1 : idx - 1) : idx;
+				if (aktiv) { aktiv.style.transition = ''; aktiv.style.transform = ''; }
+				if (mal !== idx && lys[mal]) { gaa(mal, mal > idx ? 1 : -1); }
+				return;
+			}
+			if (e.type === 'pointercancel') { return; }
+			if (Math.abs(e.clientX - n.x) < 10 && Math.abs(e.clientY - n.y) < 10) {
+				if (e.clientX < window.innerWidth * 0.28) { gaa(idx - 1); } else { gaa(idx + 1); }
+			}
+		}
+		ui.scene.addEventListener('pointerup', avslutt);
+		ui.scene.addEventListener('pointercancel', avslutt);
+
+		spill.addEventListener('pointermove', vakn);
+		document.body.appendChild(spill);
+	}
+
+	/* Kontrollene viser seg når musa rører seg, og trekker seg unna når den hviler. */
+	function vakn(e) {
+		if (!spill) { return; }
+		if (e && e.pointerType === 'touch') { return; }
+		spill.classList.remove('er-stille');
+		clearTimeout(stilleTimer);
+		stilleTimer = setTimeout(function () {
+			if (spill && !presenter && !ui.kontroll.matches(':hover') && !ui.kontroll.contains(document.activeElement)) { spill.classList.add('er-stille'); }
+		}, 2400);
+	}
+
+	function tegnLysbilde(retning) {
+		var gamle = ui.scene.querySelectorAll('.spill__lysbilde');
+		var nytt = klon(idx);
+		ui.scene.appendChild(nytt);
+		Array.prototype.forEach.call(gamle, function (g, n) {
+			// Avbrytbart: raske trykk fjerner det som fortsatt er på vei ut, så det aldri hoper seg opp.
+			if (g.classList.contains('er-ute') || n < gamle.length - 1) { g.parentNode.removeChild(g); return; }
+			g.classList.remove('er-inne'); g.classList.add('er-ute');
+			setTimeout(function () { if (g.parentNode) { g.parentNode.removeChild(g); } }, 600);
+		});
+		nytt.getBoundingClientRect();
+		nytt.classList.add('er-inne');
+	}
+
+	function oppdaterUi() {
+		var n = lys.length;
+		ui.teller.textContent = (idx + 1) + ' / ' + n;
+		ui.pvTeller.textContent = (idx + 1) + ' / ' + n;
+		ui.framLys.style.transform = 'scaleX(' + ((idx + 1) / n) + ')';
+		ui.forrige.disabled = idx === 0; ui.pvForrige.disabled = idx === 0;
+		ui.neste.disabled = idx === n - 1; ui.pvNesteKnapp.disabled = idx === n - 1;
+		var h = lys[idx].el.querySelector('.sc__h');
+		ui.live.textContent = 'Slide ' + (idx + 1) + ' of ' + n + ': ' + (h ? h.textContent : lys[idx].navn);
+		if (presenter) { tegnPresenter(); }
+	}
+
+	function tegnPresenter() {
+		ui.pvStokk.textContent = lys[idx].navn + (tilstand.navn ? '  ·  ' + tilstand.navn : '');
+		ui.pvNa.textContent = '';
+		var a = klon(idx); a.classList.add('er-inne'); ui.pvNa.appendChild(a);
+		ui.pvNeste.textContent = '';
+		if (lys[idx + 1]) {
+			var b = klon(idx + 1); b.classList.add('er-inne'); ui.pvNeste.appendChild(b);
+		} else {
+			ui.pvNeste.appendChild(el('div', 'pv__slutt', 'End of presentation'));
+		}
+		var t = notatFor(idx);
+		ui.pvTekst.textContent = t || 'No note for this slide. Improvise.';
+		ui.pvTekst.classList.toggle('er-tom', !t);
+		if (ui.pv.querySelector('.pv__notat')) { ui.pv.querySelector('.pv__notat').scrollTop = 0; }
+	}
+
+	function gaa(i, retning, fraKanal) {
+		if (!spill || !lys.length) { return; }
+		i = Math.max(0, Math.min(lys.length - 1, i));
+		if (i === idx && ui.scene.children.length) { return; }
+		var r = retning || (i >= idx ? 1 : -1);
+		idx = i;
+		tegnLysbilde(r);
+		oppdaterUi();
+		forhandslast(idx + 1); forhandslast(idx + 2); forhandslast(idx - 1);
+		if (autoSek) { startAuto(); }
+		if (!fraKanal) { send({ type: 'gaa', i: idx }); }
+		if (!presenter) { try { window.history.replaceState(null, '', lenke(tilstand.d, { i: String(idx) })); } catch (e) { /* ok */ } }
+	}
+
+	/* ---------- Auto ---------- */
+	function settAuto(s) {
+		autoSek = s;
+		ui.auto.setAttribute('aria-pressed', s ? 'true' : 'false');
+		ui.auto.textContent = s ? 'Pause' : 'Auto';
+		if (s) { ui.autoValg.value = String(s); }
+		if (s) { startAuto(); } else { stoppAuto(); }
+	}
+	function startAuto() {
+		cancelAnimationFrame(autoRaf);
+		autoStart = performance.now();
+		var steg = function (naa) {
+			if (!autoSek || !spill) { return; }
+			if (document.hidden) { autoStart = naa - (ui._autoGatt || 0); autoRaf = requestAnimationFrame(steg); return; }
+			var gatt = naa - autoStart; ui._autoGatt = gatt;
+			var p = Math.min(1, gatt / (autoSek * 1000));
+			ui.framAuto.style.transform = 'scaleX(' + (idx / lys.length + p / lys.length) + ')';
+			if (p >= 1) {
+				if (idx < lys.length - 1) { gaa(idx + 1); } else { settAuto(0); }
+				return;
+			}
+			autoRaf = requestAnimationFrame(steg);
+		};
+		autoRaf = requestAnimationFrame(steg);
+	}
+	function stoppAuto() { cancelAnimationFrame(autoRaf); if (ui.framAuto) { ui.framAuto.style.transform = 'scaleX(0)'; } }
+
+	/* ---------- Klokke og tidtaker ---------- */
+	function to(n) { return n < 10 ? '0' + n : String(n); }
+	function tikk() {
+		if (!spill) { return; }
+		var d = new Date();
+		ui.pvKlokke.textContent = to(d.getHours()) + ':' + to(d.getMinutes());
+		var ms = (tidStoppet ? tidPause : Date.now()) - startTid;
+		var s = Math.max(0, Math.floor(ms / 1000));
+		var t = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+		ui.pvTid.textContent = (t ? t + ':' + to(m) : m) + ':' + to(s % 60);
+		ui.pvTid.classList.toggle('er-pause', tidStoppet);
+	}
+
+	function settPresenter(paa) {
+		presenter = !!paa;
+		spill.classList.toggle('er-presenter', presenter);
+		spill.classList.remove('er-stille');
+		if (presenter) { tegnPresenter(); tikk(); ui.pvNesteKnapp.focus(); } else { vakn(); spill.focus(); }
+	}
+
+	/* ---------- Fullskjerm ---------- */
+	function fullskjerm() {
+		var r = document.documentElement;
+		var f = r.requestFullscreen || r.webkitRequestFullscreen;
+		if (!f || document.fullscreenElement || document.webkitFullscreenElement) { return; }
+		try {
+			var p = f.call(r);
+			vi_fullskjerm = true;
+			if (p && p.catch) { p.catch(function () { vi_fullskjerm = false; }); }
+		} catch (e) { vi_fullskjerm = false; }
+	}
+	function avFullskjerm() {
+		var x = document.exitFullscreen || document.webkitExitFullscreen;
+		if ((document.fullscreenElement || document.webkitFullscreenElement) && x) { try { x.call(document); } catch (e) { /* ok */ } }
+	}
+	function fullskjermEndret() {
+		var er = !!(document.fullscreenElement || document.webkitFullscreenElement);
+		// Esc i fullskjerm avsluttes av nettleseren før vi ser tasten; da lukker vi avspilleren også.
+		if (!er && vi_fullskjerm && spill && !presenter) { vi_fullskjerm = false; lukk(); }
+		else if (!er) { vi_fullskjerm = false; }
+	}
+	document.addEventListener('fullscreenchange', fullskjermEndret);
+	document.addEventListener('webkitfullscreenchange', fullskjermEndret);
+
+	/* ---------- Åpne og lukke ---------- */
+	var fokusFor = null;
+	function aapne(opt) {
+		opt = opt || {};
+		if (spill) { lukk(true); }
+		byggLysbilder();
+		if (!lys.length) { return; }
+		fokusFor = document.activeElement;
+		koble();
+		byggSpill();
+		document.documentElement.classList.add('spill-apen');
+		idx = -1;
+		startTid = Date.now(); tidStoppet = false;
+		klokkeTimer = setInterval(tikk, 1000);
+		if (opt.presenter) { presenter = true; spill.classList.add('er-presenter'); }
+		gaa(Math.min(opt.i || 0, lys.length - 1), 1, opt.stille);
+		if (opt.fullskjerm) { fullskjerm(); }
+		settAuto(opt.presenter ? 0 : tilstand.t);
+		if (presenter) { tikk(); ui.pvNesteKnapp.focus(); } else { spill.focus(); vakn(); }
+	}
+	function lukk(stille) {
+		if (!spill) { return; }
+		if (erVindu && stille !== true) { window.close(); }
+		stoppAuto(); clearInterval(klokkeTimer); clearTimeout(stilleTimer);
+		var s = spill; spill = null; presenter = false;
+		if (!erRolig() && stille !== true) {
+			s.style.transition = 'opacity .25s linear'; s.style.opacity = '0';
+			setTimeout(function () { if (s.parentNode) { s.parentNode.removeChild(s); } }, 260);
+		} else if (s.parentNode) { s.parentNode.removeChild(s); }
+		document.documentElement.classList.remove('spill-apen');
+		if (vi_fullskjerm) { vi_fullskjerm = false; avFullskjerm(); }
+		try { window.history.replaceState(null, '', lenke(tilstand.d)); } catch (e) { /* ok */ }
+		if (fokusFor && fokusFor.focus && stille !== true) { fokusFor.focus(); }
+	}
+
+	if (elSpill) { elSpill.addEventListener('click', function () { aapne({ fullskjerm: true }); }); }
+	if (elPresenter) { elPresenter.addEventListener('click', function () { aapne({ presenter: true }); }); }
+
+	/* ---------- Tastatur ---------- */
+	document.addEventListener('keydown', function (e) {
+		if (!spill || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) { return; }
+		var t = e.target;
+		if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) { return; }
+		var paaKnapp = t && t.tagName === 'BUTTON';
+		switch (e.key) {
+		case 'ArrowRight': case 'PageDown': case 'ArrowDown': gaa(idx + 1); break;
+		case ' ': case 'Enter':
+			if (paaKnapp) { return; } // mellomrom/enter på en knapp trykker knappen
+			gaa(e.shiftKey ? idx - 1 : idx + 1); break;
+		case 'ArrowLeft': case 'PageUp': case 'ArrowUp': case 'Backspace': gaa(idx - 1); break;
+		case 'Home': gaa(0); break;
+		case 'End': gaa(lys.length - 1); break;
+		case 'Escape': lukk(); break;
+		case 'p': case 'P': if (!erVindu) { settPresenter(!presenter); } break;
+		case 'a': case 'A': settAuto(autoSek ? 0 : (+ui.autoValg.value || 8)); break;
+		case 'f': case 'F': if (document.fullscreenElement) { vi_fullskjerm = false; avFullskjerm(); } else { fullskjerm(); } break;
+		default: return;
+		}
+		e.preventDefault();
+	});
+
+	/* ---------- Eget presentatørvindu, synket begge veier med BroadcastChannel ---------- */
+	function koble() {
+		if (kanal || !('BroadcastChannel' in window)) { return; }
+		kanal = new BroadcastChannel('haptic-ny-present');
+		kanal.onmessage = function (m) {
+			var d = m.data || {};
+			if (d.fra === egenId || d.deck !== tilstand.d.join(',')) { return; }
+			if (d.type === 'hei') {
+				if (spill) { send({ type: 'gaa', i: idx }); }
+				return;
+			}
+			if (d.type === 'gaa') {
+				if (!spill) { aapne({ i: d.i, stille: true }); return; }
+				gaa(d.i, d.i >= idx ? 1 : -1, true);
+			}
+		};
+	}
+	function send(m) {
+		if (!kanal) { return; }
+		m.fra = egenId; m.deck = tilstand.d.join(',');
+		try { kanal.postMessage(m); } catch (e) { /* ok */ }
+	}
+	var vindu = null;
+	var erVindu = startVis === 'presenter' && !!window.opener;
+	function aapneVindu() {
+		var url = lenke(tilstand.d, { vis: 'presenter', i: String(Math.max(0, idx)) });
+		// Et nytt vindu tar nettleseren ut av fullskjerm. Det skal ikke lukke publikumsvisningen.
+		vi_fullskjerm = false;
+		vindu = window.open(url, 'haptic-presenter', 'popup=yes,width=1280,height=800');
+		if (!vindu) { melding('The browser blocked the window. Allow pop-ups for this site.'); return; }
+		if (presenter) { settPresenter(false); }
+		if (spill) { hint('Move this window to the projector and press F for full screen.'); }
+	}
+	var hintTimer = 0;
+	function hint(tekst) {
+		if (!spill) { return; }
+		if (!ui.hint) { ui.hint = el('p', 'spill__hint'); ui.hint.setAttribute('role', 'status'); spill.appendChild(ui.hint); }
+		ui.hint.textContent = tekst; ui.hint.classList.add('er-synlig');
+		clearTimeout(hintTimer);
+		hintTimer = setTimeout(function () { if (ui.hint) { ui.hint.classList.remove('er-synlig'); } }, 5000);
+	}
+
+	/* ---------- Start ---------- */
+	tegn(null);
+	tegnLagrede();
+	koble();
+	if (startVis === 'presenter' && tilstand.d.length) {
+		aapne({ presenter: true, i: startI, stille: true });
+		if (erVindu) { document.title = 'Notes: ' + (tilstand.navn || 'Presentation'); }
+		send({ type: 'hei' });
+	} else if (q.has('i') && tilstand.d.length) {
+		// Lenke rett til et lysbilde (f.eks. etter oppfrisking): åpne uten fullskjerm, den krever et trykk.
+		aapne({ i: startI });
+	}
+	if (fraUrl.length) { skriv(NOKKEL_UTVALG, tilstand.d); }
+})();
